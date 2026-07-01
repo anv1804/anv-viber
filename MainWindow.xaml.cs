@@ -30,6 +30,11 @@ namespace ViberManager
 
         private readonly string _historyDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "verifier_history.db");
 
+        private int _historyCurrentPage = 1;
+        private const int HistoryPageSize = 100;
+        private int _historyTotalItems = 0;
+        private int _historyTotalPages = 1;
+
         public string ViberPath { get; set; } = string.Empty;
 
         private bool _isAllSelected = false;
@@ -1843,7 +1848,7 @@ namespace ViberManager
                 HistoryResults.Clear();
 
                 string searchText = TxtSearchHistoryResult?.Text?.Trim() ?? "";
-                int filterStatusIdx = CmbFilterHistoryStatus?.SelectedIndex ?? 0; // 0: Tất cả, 1: LIVE, 2: Unknown
+                int filterStatusIdx = CmbFilterHistoryStatus?.SelectedIndex ?? 0; // 0: Tất cả, 1: LIVE, 2: Not LIVE
 
                 string connectionString = $"Data Source={_historyDbPath};";
                 using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
@@ -1851,25 +1856,55 @@ namespace ViberManager
                     connection.Open();
                     using (var command = connection.CreateCommand())
                     {
+                        // 1. Đếm tổng số bản ghi khớp bộ lọc để tính số trang
+                        StringBuilder countQuery = new StringBuilder("SELECT COUNT(*) FROM verifier_history WHERE 1=1");
+                        if (!string.IsNullOrEmpty(searchText))
+                        {
+                            countQuery.Append(" AND phone LIKE @search");
+                        }
+                        if (filterStatusIdx == 1)
+                        {
+                            countQuery.Append(" AND result = 'LIVE'");
+                        }
+                        else if (filterStatusIdx == 2)
+                        {
+                            countQuery.Append(" AND result = 'Not LIVE'");
+                        }
+
+                        command.CommandText = countQuery.ToString();
+                        if (!string.IsNullOrEmpty(searchText))
+                        {
+                            command.Parameters.AddWithValue("@search", $"%{searchText}%");
+                        }
+                        _historyTotalItems = Convert.ToInt32(command.ExecuteScalar());
+
+                        // Tính tổng số trang (mỗi trang tối đa 100 bản ghi)
+                        _historyTotalPages = (int)Math.Ceiling((double)_historyTotalItems / HistoryPageSize);
+                        if (_historyTotalPages < 1) _historyTotalPages = 1;
+                        if (_historyCurrentPage > _historyTotalPages) _historyCurrentPage = _historyTotalPages;
+                        if (_historyCurrentPage < 1) _historyCurrentPage = 1;
+
+                        // 2. Lấy dữ liệu phân trang (LIMIT 100 OFFSET (trang - 1)*100)
+                        command.Parameters.Clear();
                         StringBuilder query = new StringBuilder("SELECT phone, result, time, account_name FROM verifier_history WHERE 1=1");
-                        
                         if (!string.IsNullOrEmpty(searchText))
                         {
                             query.Append(" AND phone LIKE @search");
                             command.Parameters.AddWithValue("@search", $"%{searchText}%");
                         }
-
                         if (filterStatusIdx == 1)
                         {
-                            query.Append(" AND result LIKE '%LIVE%'");
+                            query.Append(" AND result = 'LIVE'");
                         }
                         else if (filterStatusIdx == 2)
                         {
-                            query.Append(" AND result LIKE '%Unknown%'");
+                            query.Append(" AND result = 'Not LIVE'");
                         }
 
-                        query.Append(" ORDER BY id DESC;"); // Mới nhất lên đầu
+                        query.Append(" ORDER BY id DESC LIMIT @limit OFFSET @offset;");
                         command.CommandText = query.ToString();
+                        command.Parameters.AddWithValue("@limit", HistoryPageSize);
+                        command.Parameters.AddWithValue("@offset", (_historyCurrentPage - 1) * HistoryPageSize);
 
                         using (var reader = command.ExecuteReader())
                         {
@@ -1890,6 +1925,12 @@ namespace ViberManager
                 Dispatcher.Invoke(() =>
                 {
                     GridHistoryResults?.Items.Refresh();
+                    
+                    // Cập nhật thông tin phân trang trên giao diện
+                    if (TxtHistoryTotal != null) TxtHistoryTotal.Text = $"Tổng số: {_historyTotalItems:N0} số";
+                    if (TxtHistoryPageInfo != null) TxtHistoryPageInfo.Text = $"Trang {_historyCurrentPage} / {_historyTotalPages}";
+                    if (BtnHistoryPrevPage != null) BtnHistoryPrevPage.IsEnabled = _historyCurrentPage > 1;
+                    if (BtnHistoryNextPage != null) BtnHistoryNextPage.IsEnabled = _historyCurrentPage < _historyTotalPages;
                 });
             }
             catch (Exception ex)
@@ -1931,11 +1972,11 @@ namespace ViberManager
                     }
 
                     // Lọc theo kết quả
-                    if (filterStatusIdx == 1 && !item.Result.Contains("LIVE"))
+                    if (filterStatusIdx == 1 && item.Result != "LIVE")
                     {
                         return false;
                     }
-                    if (filterStatusIdx == 2 && !item.Result.Contains("Unknown"))
+                    if (filterStatusIdx == 2 && item.Result != "Not LIVE")
                     {
                         return false;
                     }
@@ -1964,12 +2005,33 @@ namespace ViberManager
 
         private void TxtSearchHistoryResult_TextChanged(object sender, TextChangedEventArgs e)
         {
+            _historyCurrentPage = 1;
             LoadHistoryResults();
         }
 
         private void CmbFilterHistoryStatus_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized) return;
+            _historyCurrentPage = 1;
             LoadHistoryResults();
+        }
+
+        private void BtnHistoryPrevPage_Click(object sender, RoutedEventArgs e)
+        {
+            if (_historyCurrentPage > 1)
+            {
+                _historyCurrentPage--;
+                LoadHistoryResults();
+            }
+        }
+
+        private void BtnHistoryNextPage_Click(object sender, RoutedEventArgs e)
+        {
+            if (_historyCurrentPage < _historyTotalPages)
+            {
+                _historyCurrentPage++;
+                LoadHistoryResults();
+            }
         }
 
         private void BtnClearHistoryDb_Click(object sender, RoutedEventArgs e)
