@@ -115,20 +115,22 @@ namespace ViberManager.Services
                     AutomationElement viberEl = AutomationElement.FromHandle(hwnd);
                     if (viberEl != null && ViberAutomationService.GetWindowRect(hwnd, out ViberAutomationService.RECT rect))
                     {
-                        // 1. Kiểm tra sự tồn tại của ô nhập tin nhắn "Type a message..." ở dưới cùng bên phải
+                        int winWidth  = rect.Right  - rect.Left;
+                        int winHeight = rect.Bottom - rect.Top;
+
+                        // 1. Kiểm tra ô nhập tin nhắn ở pane phải (X > 320, Y > 200)
                         bool hasMessageInput = false;
-                        AutomationElementCollection editFields = viberEl.FindAll(TreeScope.Descendants, 
+                        AutomationElementCollection editFields = viberEl.FindAll(TreeScope.Descendants,
                             new OrCondition(
                                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
                                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document)
                             ));
-                        
+
                         foreach (AutomationElement edit in editFields)
                         {
                             try
                             {
                                 var bound = edit.Current.BoundingRectangle;
-                                // Ô nhập tin nhắn phải nằm ở bên phải danh sách chat (X > rect.Left + 320) và ở nửa dưới cửa sổ (Y > rect.Top + 200)
                                 if (bound.Left > rect.Left + 320 && bound.Top > rect.Top + 200 && bound.Height > 0)
                                 {
                                     hasMessageInput = true;
@@ -138,8 +140,12 @@ namespace ViberManager.Services
                             catch { }
                         }
 
-                        // 2. Kiểm tra xem có nút Viber Out ở khu vực giữa/dưới chat pane không
+                        // 2. Kiểm tra nút Viber Out trong card giữa màn hình (phân biệt với nút header ở góc trên phải)
+                        //    - Nút header: nhỏ, nằm ở Y gần rect.Top (< rect.Top + 80)
+                        //    - Nút card giữa: lớn, nằm ở Y > rect.Top + 200, nằm ở X giữa cửa sổ
                         bool hasCenterViberOutButton = false;
+                        int centerXMin = rect.Left + (int)(winWidth * 0.35);
+                        int centerXMax = rect.Left + (int)(winWidth * 0.85);
                         AutomationElementCollection buttons = viberEl.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button));
                         foreach (AutomationElement btn in buttons)
                         {
@@ -149,8 +155,8 @@ namespace ViberManager.Services
                                 if (btnName.Contains("viber out"))
                                 {
                                     var bound = btn.Current.BoundingRectangle;
-                                    // Nút Viber Out ở góc trên cùng bên phải nằm ở tọa độ Y rất cao (gần rect.Top), nút ở giữa chat pane sẽ ở thấp hơn (Top > rect.Top + 120)
-                                    if (bound.Top > rect.Top + 120 && bound.Height > 0)
+                                    // Nút card giữa: nằm trong vùng trung tâm và đủ xa header
+                                    if (bound.Top > rect.Top + 200 && bound.Left > centerXMin && bound.Left < centerXMax && bound.Height > 0)
                                     {
                                         hasCenterViberOutButton = true;
                                         break;
@@ -160,12 +166,33 @@ namespace ViberManager.Services
                             catch { }
                         }
 
-                        System.Diagnostics.Debug.WriteLine($"[DOM ANALYSIS SĐT {phone}] Có ô nhập tin nhắn (Right Pane) = {hasMessageInput}, Có nút Viber Out giữa = {hasCenterViberOutButton}");
+                        // 3. Kiểm tra thêm: có text "Không biết" / "unknown" trong chat pane không?
+                        //    Đây là text tiêu đề hiển thị khi số chưa có tài khoản Viber.
+                        bool hasUnknownText = false;
+                        AutomationElementCollection textEls = viberEl.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text));
+                        foreach (AutomationElement txt in textEls)
+                        {
+                            try
+                            {
+                                string name = txt.Current.Name.ToLower();
+                                var bound = txt.Current.BoundingRectangle;
+                                // Chỉ xét text trong pane phải (X > 320) để tránh nhầm sidebar
+                                if (bound.Left > rect.Left + 320 && bound.Top > rect.Top + 80 &&
+                                    (name.Contains("không biết") || name.Contains("unknown") ||
+                                     name.Contains("viber out") || name.Contains("chưa có")))
+                                {
+                                    hasUnknownText = true;
+                                    break;
+                                }
+                            }
+                            catch { }
+                        }
 
-                        // SỰ KHÁC BIỆT CHÍNH XÁC: 
-                        // - Tài khoản Unknown: KHÔNG có ô nhập tin nhắn HOẶC CÓ nút Viber Out ở giữa màn hình chat.
-                        // - Tài khoản Live: CÓ ô nhập tin nhắn VÀ KHÔNG CÓ nút Viber Out ở giữa.
-                        if (hasCenterViberOutButton || !hasMessageInput)
+                        System.Diagnostics.Debug.WriteLine($"[DOM ANALYSIS SĐT {phone}] hasMessageInput={hasMessageInput}, hasCenterViberOutButton={hasCenterViberOutButton}, hasUnknownText={hasUnknownText}");
+
+                        // Kết luận:
+                        // Not LIVE nếu: có nút Viber Out giữa màn hình, HOẶC có text "Không biết/Unknown", HOẶC không có ô nhập tin nhắn
+                        if (hasCenterViberOutButton || hasUnknownText || !hasMessageInput)
                         {
                             System.Diagnostics.Debug.WriteLine($"[DOM SĐT {phone}] Kết luận: Not LIVE");
                             return "Not LIVE";
