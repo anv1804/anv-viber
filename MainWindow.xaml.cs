@@ -1044,31 +1044,63 @@ namespace ViberManager
         {
             try
             {
-                ViberContainer.Children.Clear();
                 PanelPlaceholder.Visibility = Visibility.Collapsed;
 
                 if (_currentActiveProfile != null)
                 {
                     TxtActiveProfile.Text = $"Đang hiển thị: {_currentActiveProfile.Name} ({_currentActiveProfile.Phone})";
+                    
+                    // Ẩn tất cả các host khác
+                    foreach (var profile in Profiles)
+                    {
+                        if (profile != _currentActiveProfile && profile.AttachedHost is ViberHost host)
+                        {
+                            host.Visibility = Visibility.Collapsed;
+                        }
+                    }
+
+                    // Tận dụng ViberHost đã lưu trữ hoặc khởi tạo mới
+                    if (_currentActiveProfile.AttachedHost is ViberHost cachedHost)
+                    {
+                        _currentHost = cachedHost;
+                        cachedHost.Visibility = Visibility.Visible;
+                        if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
+                        {
+                            cachedHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
+                        }
+                    }
+                    else
+                    {
+                        _currentHost = new ViberHost(hwnd, _currentActiveProfile.DataDirPath)
+                        {
+                            Width = ViberContainer.ActualWidth,
+                            Height = ViberContainer.ActualHeight
+                        };
+                        _currentActiveProfile.AttachedHost = _currentHost;
+                        ViberContainer.Children.Add(_currentHost);
+                        
+                        if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
+                        {
+                            _currentHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
+                        }
+                    }
                 }
-
-                _currentHost = new ViberHost(hwnd, _currentActiveProfile?.DataDirPath ?? "")
+                else
                 {
-                    Width = ViberContainer.ActualWidth,
-                    Height = ViberContainer.ActualHeight
-                };
-
-                ViberContainer.Children.Add(_currentHost);
-                
-                // Gọi Resize ngay lập tức để đồng bộ kích thước ban đầu với WPF Grid
-                if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
-                {
-                    _currentHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
+                    ViberContainer.Children.Clear();
+                    _currentHost = new ViberHost(hwnd, "")
+                    {
+                        Width = ViberContainer.ActualWidth,
+                        Height = ViberContainer.ActualHeight
+                    };
+                    ViberContainer.Children.Add(_currentHost);
+                    if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
+                    {
+                        _currentHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
+                    }
                 }
 
                 TxtStatus.Text = $"Đã nhúng Viber thành công.";
-                
-                // Reset cờ click lần đầu cho Viber mới nhúng
                 _hasAutoResetOnFirstClick = false;
 
                 // Tự động focus bàn phím mặc định ngay khi nhúng xong
@@ -1574,32 +1606,64 @@ namespace ViberManager
         {
             if (GridProfiles.SelectedItem is ViberProfile selected)
             {
-                // Thay vì detach làm bật cửa sổ ra ngoài Desktop, ta ẩn cửa sổ của profile cũ đi (vẫn giữ parent trong container)
-                if (_currentActiveProfile != null && _currentActiveProfile != selected)
+                // 1. Ẩn tất cả các ViberHost của các profile khác trong WPF Container
+                foreach (var profile in Profiles)
                 {
-                    try
+                    if (profile != selected && profile.AttachedHost is ViberHost host)
                     {
-                        if (_currentActiveProfile.WindowHandle != IntPtr.Zero)
+                        host.Visibility = Visibility.Collapsed;
+                        if (profile.WindowHandle != IntPtr.Zero)
                         {
-                            Win32Helper.ShowWindow(_currentActiveProfile.WindowHandle, Win32Helper.SW_HIDE);
+                            Win32Helper.ShowWindow(profile.WindowHandle, Win32Helper.SW_HIDE);
                         }
                     }
-                    catch { }
                 }
 
+                // 2. Xử lý hiển thị profile được chọn
                 if (selected.Status == "Đang nhúng" && selected.WindowHandle != IntPtr.Zero)
                 {
                     _currentActiveProfile = selected;
-                    
-                    // Hiện cửa sổ Viber của profile được chọn
+                    PanelPlaceholder.Visibility = Visibility.Collapsed;
+                    TxtActiveProfile.Text = $"Đang hiển thị: {selected.Name} ({selected.Phone})";
+
                     Win32Helper.ShowWindow(selected.WindowHandle, Win32Helper.SW_SHOW);
+
+                    // Lấy hoặc khởi tạo ViberHost của riêng profile này
+                    if (selected.AttachedHost is ViberHost cachedHost)
+                    {
+                        _currentHost = cachedHost;
+                        cachedHost.Visibility = Visibility.Visible;
+                        
+                        // Đưa lên trên cùng và kích hoạt lại kích thước
+                        if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
+                        {
+                            cachedHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
+                        }
+                        cachedHost.FocusViber();
+                    }
+                    else
+                    {
+                        // Chưa có thì khởi tạo mới và đưa vào container
+                        _currentHost = new ViberHost(selected.WindowHandle, selected.DataDirPath)
+                        {
+                            Width = ViberContainer.ActualWidth,
+                            Height = ViberContainer.ActualHeight
+                        };
+                        selected.AttachedHost = _currentHost;
+                        ViberContainer.Children.Add(_currentHost);
+                        
+                        if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
+                        {
+                            _currentHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
+                        }
+                        _currentHost.FocusViber();
+                    }
                     
-                    EmbedViberWindow(selected.WindowHandle);
+                    TxtStatus.Text = $"Hiển thị tài khoản: {selected.Name}";
                 }
                 else
                 {
-                    // Nếu profile này chưa nhúng, ẩn màn chiếu cũ
-                    ViberContainer.Children.Clear();
+                    // Nếu profile này chưa nhúng, ẩn màn chiếu
                     PanelPlaceholder.Visibility = Visibility.Visible;
                     TxtActiveProfile.Text = "Không có tài khoản hoạt động";
                     _currentActiveProfile = null;

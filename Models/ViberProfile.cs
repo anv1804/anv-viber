@@ -47,6 +47,9 @@ namespace ViberManager.Models
         public IntPtr WindowHandle { get; set; } = IntPtr.Zero;
 
         [JsonIgnore]
+        public object? AttachedHost { get; set; } = null; // Lưu trữ thực thể ViberHost của riêng profile này
+
+        [JsonIgnore]
         public string DisplayName => string.IsNullOrEmpty(Phone) ? Name : $"{Name} ({Phone})";
     }
 }
