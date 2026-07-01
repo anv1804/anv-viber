@@ -1,0 +1,30 @@
+# Build directories
+bin/
+obj/
+publish/
+win-x64/
+runtimes/
+
+# User-specific files
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# Local database and profiles
+verifier_history.db
+profiles.json
+Profiles/
+LocalLow/
+ViberApp/
+debug_capture.png
+last_check_screenshot.png
+
+# Large installers and zips
+Anv_Viber_Premium_Trial.zip
+ViberSetup.exe
+
+# Executables & libraries in the root (since they are generated or third-party dlls)
+/*.exe
+/*.dll
+/*.pdb

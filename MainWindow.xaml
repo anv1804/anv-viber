@@ -1,0 +1,910 @@
+<Window x:Class="ViberManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ViberManager"
+        mc:Ignorable="d"
+        Title="Anv Viber Premium" Height="800" Width="1480"
+        WindowStartupLocation="CenterScreen"
+        Background="#EFEFEF"
+        FontFamily="Segoe UI" FontSize="12"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+
+    <Window.Resources>
+        <!-- Colors -->
+        <SolidColorBrush x:Key="ViberPurple"   Color="#5C51D6"/>
+        <SolidColorBrush x:Key="TextDark"      Color="#111111"/>
+        <SolidColorBrush x:Key="TextMuted"     Color="#777777"/>
+        <SolidColorBrush x:Key="Border1"       Color="#C8C8C8"/>
+        <SolidColorBrush x:Key="Border2"       Color="#E2E2E2"/>
+        <SolidColorBrush x:Key="CardBg"        Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="HeaderBg"      Color="#F7F7F7"/>
+        <SolidColorBrush x:Key="TableHeaderBg" Color="#F2F2F2"/>
+        <SolidColorBrush x:Key="RowHover"      Color="#F0F4FF"/>
+        <SolidColorBrush x:Key="RowSelected"   Color="#D8E4F8"/>
+        <SolidColorBrush x:Key="SuccessColor"  Color="#22C55E"/>
+        <DropShadowEffect x:Key="PremiumShadow" Opacity="0" BlurRadius="0" ShadowDepth="0"/>
+
+
+
+        <!-- ══ CLASSIC GRADIENT BUTTON (WinForms Style) ══ -->
+        <Style TargetType="Button" x:Key="Btn">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#FCFCFC" Offset="0.0"/>
+                        <GradientStop Color="#F2F2F2" Offset="0.1"/>
+                        <GradientStop Color="#E1E1E1" Offset="0.9"/>
+                        <GradientStop Color="#D5D5D5" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground"      Value="#000000"/>
+            <Setter Property="BorderBrush"     Value="#707070"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize"        Value="11"/>
+            <Setter Property="Padding"         Value="9,3"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#3C7FB1"/>
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#EDF5FA" Offset="0.0"/>
+                                            <GradientStop Color="#D9ECF6" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2C628B"/>
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#C2E4F6" Offset="0.0"/>
+                                            <GradientStop Color="#86CCD9" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Keep compatibility aliases -->
+        <Style TargetType="Button" x:Key="PremiumButton"   BasedOn="{StaticResource Btn}"/>
+        <Style TargetType="Button" x:Key="OutlineBtnStyle" BasedOn="{StaticResource Btn}"/>
+
+        <!-- Custom colored classic buttons -->
+        <Style TargetType="Button" x:Key="AddBtnStyle" BasedOn="{StaticResource Btn}">
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style TargetType="Button" x:Key="BlueBtnStyle" BasedOn="{StaticResource Btn}">
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style TargetType="Button" x:Key="SuccessBtnStyle" BasedOn="{StaticResource Btn}">
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style TargetType="Button" x:Key="DangerBtnStyle" BasedOn="{StaticResource Btn}">
+            <Setter Property="BorderBrush" Value="#707070"/>
+            <Setter Property="Foreground" Value="#A00000"/>
+        </Style>
+        <Style TargetType="Button" x:Key="WarningBtnStyle" BasedOn="{StaticResource Btn}">
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+
+        <!-- TEXTBOX -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background"               Value="White"/>
+            <Setter Property="BorderBrush"              Value="#7A7A7A"/>
+            <Setter Property="BorderThickness"          Value="1"/>
+            <Setter Property="Padding"                  Value="3,2"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Background="{TemplateBinding Background}" CornerRadius="0">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#3C7FB1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- TAB ITEM -->
+        <Style TargetType="TabItem" x:Key="FlatTabItemStyle">
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" BorderThickness="1,1,1,0" BorderBrush="#A0A0A0"
+                                Background="#E1E1E1" Padding="12,5" Margin="2,2,0,0">
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="White"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#707070"/>
+                                <Setter Property="Panel.ZIndex" Value="100"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabControl" x:Key="FlatTabControlStyle">
+            <Setter Property="ItemContainerStyle" Value="{StaticResource FlatTabItemStyle}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" BorderBrush="#A0A0A0"
+                                    BorderThickness="0,0,0,1" Background="Transparent">
+                                <TabPanel IsItemsHost="True" Background="Transparent"/>
+                            </Border>
+                            <ContentPresenter Grid.Row="1" ContentSource="SelectedContent"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ CLASSIC GRID STYLING (WinForms style) ══ -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#FAFafA" Offset="0"/>
+                        <GradientStop Color="#E5E5E5" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground"                 Value="#000000"/>
+            <Setter Property="FontWeight"                 Value="Normal"/>
+            <Setter Property="FontSize"                   Value="11"/>
+            <Setter Property="Padding"                    Value="6,4"/>
+            <Setter Property="BorderThickness"            Value="0,0,1,1"/>
+            <Setter Property="BorderBrush"                Value="#C0C0C0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Border x:Name="Hd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding"          Value="6,0"/>
+            <Setter Property="BorderThickness"  Value="0,0,1,0"/>
+            <Setter Property="BorderBrush"      Value="#D0D0D0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background"       Value="White"/>
+            <Setter Property="Height"           Value="22"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected"  Value="True">
+                    <Setter Property="Background" Value="#3399FF"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="GridLinesVisibility"      Value="All"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#D0D0D0"/>
+            <Setter Property="VerticalGridLinesBrush"   Value="#D0D0D0"/>
+            <Setter Property="Background"               Value="White"/>
+            <Setter Property="BorderThickness"          Value="1"/>
+            <Setter Property="BorderBrush"              Value="#808080"/>
+            <Setter Property="RowHeaderWidth"           Value="0"/>
+            <Setter Property="SelectionMode"            Value="Single"/>
+            <Setter Property="CanUserAddRows"           Value="False"/>
+            <Setter Property="CanUserResizeRows"        Value="False"/>
+            <Setter Property="AutoGenerateColumns"      Value="False"/>
+            <Setter Property="HeadersVisibility"        Value="Column"/>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Background"      Value="White"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource Border1}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="4,2"/>
+            <Setter Property="FontSize"        Value="11"/>
+        </Style>
+
+        <!-- Shared section title -->
+        <Style TargetType="TextBlock" x:Key="SectionTitle">
+            <Setter Property="FontSize"          Value="12"/>
+            <Setter Property="FontWeight"        Value="SemiBold"/>
+            <Setter Property="Foreground"        Value="{StaticResource TextDark}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ APP HEADER ═══ -->
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource Border1}"
+                BorderThickness="0,0,0,1" Padding="14,7">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Anv Viber" FontSize="14" FontWeight="Bold"
+                               Foreground="{StaticResource TextDark}" VerticalAlignment="Center"/>
+                    <Border Background="#EEEAFF" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Premium v1.2.0" Foreground="{StaticResource ViberPurple}"
+                                   FontSize="10" FontWeight="SemiBold"/>
+                    </Border>
+                    <TextBlock x:Name="TxtViberPathDisplay" Text="Chua cau hinh"
+                               VerticalAlignment="Center" Margin="14,0,0,0"
+                               Foreground="{StaticResource TextMuted}" FontSize="11"
+                               MaxWidth="360" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Cai vao o E"    Style="{StaticResource Btn}" Margin="0,0,4,0" Padding="10,4" Click="BtnInstallViberToE_Click"/>
+                    <Button Content="Chon Viber.exe" Style="{StaticResource Btn}" Padding="10,4"   Click="BtnConfigViberPath_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <Grid Grid.Row="1" Margin="10,8,10,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="470"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT PANEL -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1.1*"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="1.1*"/>
+                </Grid.RowDefinitions>
+
+                <!-- ████ CARD 1: TAI KHOAN ████ -->
+                <Border Grid.Row="0" Background="{StaticResource CardBg}"
+                        BorderBrush="{StaticResource Border1}" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Toolbar -->
+                        <Border Grid.Row="0" Background="{StaticResource HeaderBg}"
+                                BorderBrush="{StaticResource Border2}" BorderThickness="0,0,0,1" Padding="8,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Tai khoan Viber" Style="{StaticResource SectionTitle}"/>
+                                    <Border Background="#E8E8E8" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="TxtProfileCount" Text="0 tai khoan"
+                                                   Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="SemiBold"/>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="Them"    Style="{StaticResource Btn}"          Padding="8,3" Margin="0,0,2,0" Click="BtnAddViber_Click"/>
+                                    <Button Content="Sua"     Style="{StaticResource Btn}"          Padding="8,3" Margin="0,0,2,0" Click="BtnRename_Click"/>
+                                    <Button Content="Xoa"     Style="{StaticResource Btn}"          Padding="8,3" Margin="0,0,2,0" Click="BtnDelete_Click"/>
+                                    <Button Content="Tat het" Style="{StaticResource DangerBtnStyle}" Padding="8,3"                Click="BtnKillAllViber_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Search + Filter -->
+                        <Grid Grid.Row="1" Margin="8,5,8,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="5"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource Border1}" BorderThickness="1">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Text="🔍" VerticalAlignment="Center"
+                                               Margin="5,0,3,0" FontSize="10" Foreground="{StaticResource TextMuted}"/>
+                                    <TextBox x:Name="TxtSearchProfile" Background="Transparent" BorderThickness="0"
+                                             Height="24" VerticalContentAlignment="Center" FontSize="11"
+                                             TextChanged="TxtSearchProfile_TextChanged"/>
+                                </DockPanel>
+                            </Border>
+                            <ComboBox Grid.Column="2" x:Name="CmbStatusFilter" Height="26" FontSize="11"
+                                      VerticalContentAlignment="Center" SelectionChanged="CmbStatusFilter_SelectionChanged">
+                                <ComboBoxItem Content="Tất cả"    IsSelected="True"/>
+                                <ComboBoxItem Content="Đang nhúng"/>
+                                <ComboBoxItem Content="Đang đóng"/>
+                                <ComboBoxItem Content="Đang mở"/>
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- DataGrid + action bar -->
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- ACCOUNT TABLE -->
+                            <DataGrid Grid.Row="0" x:Name="GridProfiles"
+                                      SelectionChanged="GridProfiles_SelectionChanged"
+                                      FontSize="11" RowHeight="27">
+                                <DataGrid.Columns>
+                                    <!-- Checkbox -->
+                                    <DataGridTemplateColumn Width="34" CanUserResize="False" CanUserSort="False">
+                                        <DataGridTemplateColumn.HeaderTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding DataContext.IsAllSelected, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.HeaderTemplate>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- # -->
+                                    <DataGridTextColumn Header="#" Binding="{Binding DisplayIndex}"
+                                                        Width="28" IsReadOnly="True" CanUserResize="False">
+                                        <DataGridTextColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTextColumn.HeaderStyle>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                <Setter Property="VerticalAlignment"   Value="Center"/>
+                                                <Setter Property="Foreground"          Value="#999999"/>
+                                                <Setter Property="FontSize"            Value="10"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+
+                                    <!-- Ten Profile -->
+                                    <DataGridTextColumn Header="Ten Profile" Binding="{Binding Name}" Width="120">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="FontWeight"        Value="SemiBold"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+
+                                    <!-- So Dien Thoai -->
+                                    <DataGridTemplateColumn Header="So Dien Thoai" Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Phone}" VerticalAlignment="Center"
+                                                           FontFamily="Consolas" FontSize="11"
+                                                           Cursor="Hand" ToolTip="Click de copy dang 0..."
+                                                           MouseDown="PhoneTextBlock_MouseDown">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#333333"/>
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Foreground"      Value="{StaticResource ViberPurple}"/>
+                                                                    <Setter Property="TextDecorations" Value="Underline"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Trang thai — colored badge -->
+                                    <DataGridTemplateColumn Header="Trang thai" Width="90" CanUserResize="False">
+                                        <DataGridTemplateColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTemplateColumn.HeaderStyle>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border x:Name="Badge" Background="#EEEEEE"
+                                                        Padding="6,1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock x:Name="BadgeTxt" Text="{Binding Status}"
+                                                               FontSize="10" FontWeight="SemiBold"
+                                                               Foreground="#666666" HorizontalAlignment="Center"/>
+                                                </Border>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="LIVE">
+                                                        <Setter TargetName="Badge"    Property="Background" Value="#DCFCE7"/>
+                                                        <Setter TargetName="BadgeTxt" Property="Foreground" Value="#15803D"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="DIE">
+                                                        <Setter TargetName="Badge"    Property="Background" Value="#FEE2E2"/>
+                                                        <Setter TargetName="BadgeTxt" Property="Foreground" Value="#B91C1C"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Dang nhung">
+                                                        <Setter TargetName="Badge"    Property="Background" Value="#DBEAFE"/>
+                                                        <Setter TargetName="BadgeTxt" Property="Foreground" Value="#1D4ED8"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Dang mo">
+                                                        <Setter TargetName="Badge"    Property="Background" Value="#E0F2FE"/>
+                                                        <Setter TargetName="BadgeTxt" Property="Foreground" Value="#0369A1"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Dong">
+                                                        <Setter TargetName="Badge"    Property="Background" Value="#F3F4F6"/>
+                                                        <Setter TargetName="BadgeTxt" Property="Foreground" Value="#6B7280"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <!-- Bottom action bar -->
+                            <Border Grid.Row="1" Background="{StaticResource HeaderBg}"
+                                    BorderBrush="{StaticResource Border2}" BorderThickness="0,1,0,0" Padding="8,5">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Da chon:" FontSize="11"
+                                                   Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtSelectedCount" Text="0" FontWeight="Bold" FontSize="11"
+                                                   Foreground="{StaticResource ViberPurple}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel x:Name="PanelSingleActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="Check Live"  Style="{StaticResource AddBtnStyle}"     Padding="8,3" Margin="0,0,3,0" Click="BtnCheckLive_Click"/>
+                                        <Button Content="Mo / Login"  Style="{StaticResource SuccessBtnStyle}" Padding="8,3" Margin="0,0,3,0" Click="BtnOpenViber_Click"/>
+                                        <Button Content="Dong Viber"  Style="{StaticResource DangerBtnStyle}"  Padding="8,3"                  Click="BtnCloseViber_Click"/>
+                                    </StackPanel>
+                                    <StackPanel x:Name="PanelBulkActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                                        <Button Content="Check loat" Style="{StaticResource AddBtnStyle}"     Padding="8,3" Margin="0,0,3,0" Click="BtnBulkCheckLive_Click"/>
+                                        <Button Content="Chay loat"  Style="{StaticResource SuccessBtnStyle}" Padding="8,3" Margin="0,0,3,0" Click="BtnBulkRun_Click"/>
+                                        <Button Content="Dung loat"  Style="{StaticResource DangerBtnStyle}"  Padding="8,3" Margin="0,0,3,0" Click="BtnBulkStop_Click"/>
+                                        <Button Content="Xoa loat"   Style="{StaticResource DangerBtnStyle}"  Padding="8,3"                  Click="BtnBulkDelete_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ████ CARD 2: KIEM TRA SDT ████ -->
+                <Border Grid.Row="2" Background="{StaticResource CardBg}"
+                        BorderBrush="{StaticResource Border1}" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Toolbar -->
+                        <Border Grid.Row="0" Background="{StaticResource HeaderBg}"
+                                BorderBrush="{StaticResource Border2}" BorderThickness="0,0,0,1" Padding="8,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Kiem tra SDT Viber" Style="{StaticResource SectionTitle}"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock x:Name="TxtVerifyProgressStatus" Text="Cho..."
+                                               FontSize="10" Foreground="{StaticResource TextMuted}"
+                                               Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <ProgressBar x:Name="VerifyProgress" Width="90" Height="3"
+                                                 Minimum="0" Maximum="100" Value="0"
+                                                 Foreground="{StaticResource ViberPurple}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Controls: acc + file + start -->
+                        <Grid Grid.Row="1" Margin="8,6,8,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="78"/>
+                                <ColumnDefinition Width="128"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Acc test:" FontSize="11"
+                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ComboBox Grid.Column="1" x:Name="CmbVerifyProfile" Height="24" FontSize="11"
+                                      DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="2" Content="Nap File" Style="{StaticResource Btn}"
+                                    Height="24" FontSize="11" Margin="4,0,0,0" Click="BtnImportVerifyPhones_Click"/>
+                            <Button Grid.Column="3" x:Name="BtnStartVerify" Content="Bat dau kiem tra"
+                                    Style="{StaticResource AddBtnStyle}"
+                                    Height="24" FontSize="11" FontWeight="SemiBold"
+                                    Margin="4,0,0,0" Click="BtnStartVerify_Click"/>
+                        </Grid>
+
+                        <!-- Phone input -->
+                        <TextBox Grid.Row="2" x:Name="TxtVerifyPhones"
+                                 Height="42" FontSize="11"
+                                 AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                 TextWrapping="Wrap" Margin="8,0,8,5" Padding="4"
+                                 ToolTip="Nhap danh sach SDT, moi so mot dong"/>
+
+                        <!-- Result tabs -->
+                        <TabControl Grid.Row="3" Style="{StaticResource FlatTabControlStyle}">
+
+                            <!-- TAB: Ket qua hien tai -->
+                            <TabItem Header="Ket qua hien tai">
+                                <Grid Margin="6,5,6,5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <!-- Filter bar -->
+                                    <Grid Grid.Row="0" Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource Border1}" BorderThickness="1">
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Left" Text="🔍" VerticalAlignment="Center"
+                                                           Margin="4,0,3,0" FontSize="10" Foreground="{StaticResource TextMuted}"/>
+                                                <TextBox x:Name="TxtSearchCurrentResult" Background="Transparent" BorderThickness="0"
+                                                         Height="22" VerticalContentAlignment="Center" FontSize="11"
+                                                         TextChanged="TxtSearchCurrentResult_TextChanged"/>
+                                            </DockPanel>
+                                        </Border>
+                                        <ComboBox Grid.Column="2" x:Name="CmbFilterCurrentStatus" Height="24" FontSize="11"
+                                                  VerticalContentAlignment="Center" SelectionChanged="CmbFilterCurrentStatus_SelectionChanged">
+                                            <ComboBoxItem Content="Tat ca ket qua" IsSelected="True"/>
+                                            <ComboBoxItem Content="LIVE"/>
+                                            <ComboBoxItem Content="Not LIVE"/>
+                                        </ComboBox>
+                                        <Button Grid.Column="4" Content="Clear" Style="{StaticResource DangerBtnStyle}"
+                                                Padding="8,0" Height="24" FontSize="11"
+                                                Click="BtnClearCurrentResults_Click"/>
+                                    </Grid>
+                                    <!-- Results table -->
+                                    <DataGrid Grid.Row="1" x:Name="GridVerifyResults" FontSize="11" RowHeight="24">
+                                        <DataGrid.RowStyle>
+                                            <Style TargetType="DataGridRow">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Result}" Value="LIVE">
+                                                        <Setter Property="Background" Value="#E6FAF0"/>
+                                                        <Setter Property="Foreground" Value="#15803D"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Result}" Value="Not LIVE">
+                                                        <Setter Property="Background" Value="#FEE8E8"/>
+                                                        <Setter Property="Foreground" Value="#B91C1C"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </DataGrid.RowStyle>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="So Dien Thoai" Binding="{Binding Phone}" Width="1.8*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                        <Setter Property="FontFamily"        Value="Consolas"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="Ket Qua" Binding="{Binding Result}" Width="1.1*">
+                                                <DataGridTextColumn.HeaderStyle>
+                                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.HeaderStyle>
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="VerticalAlignment"   Value="Center"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                        <Setter Property="FontWeight"          Value="Bold"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="Ten Viber" Binding="{Binding AccountName}" Width="1.5*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="Thoi Gian" Binding="{Binding Time}" Width="1.4*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                        <Setter Property="VerticalAlignment"   Value="Center"/>
+                                                        <Setter Property="Margin"              Value="0,0,8,0"/>
+                                                        <Setter Property="Foreground"          Value="#666666"/>
+                                                        <Setter Property="FontSize"            Value="10"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTemplateColumn Header="Hanh Dong" Width="80">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="Mo" Height="18" Padding="10,0" FontSize="10" Click="BtnOpenChat_Click">
+                                                            <Button.Style>
+                                                                <Style TargetType="Button" BasedOn="{StaticResource SuccessBtnStyle}">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Result}" Value="LIVE">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Button.Style>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </TabItem>
+
+                            <!-- TAB: Lich su quet -->
+                            <TabItem Header="Lich su quet" Selector.Selected="TabHistory_Selected">
+                                <Grid Margin="6,5,6,5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0" Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource Border1}" BorderThickness="1">
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Left" Text="🔍" VerticalAlignment="Center"
+                                                           Margin="4,0,3,0" FontSize="10" Foreground="{StaticResource TextMuted}"/>
+                                                <TextBox x:Name="TxtSearchHistoryResult" Background="Transparent" BorderThickness="0"
+                                                         Height="22" VerticalContentAlignment="Center" FontSize="11"
+                                                         TextChanged="TxtSearchHistoryResult_TextChanged"/>
+                                            </DockPanel>
+                                        </Border>
+                                        <ComboBox Grid.Column="2" x:Name="CmbFilterHistoryStatus" Height="24" FontSize="11"
+                                                  VerticalContentAlignment="Center" SelectionChanged="CmbFilterHistoryStatus_SelectionChanged">
+                                            <ComboBoxItem Content="Tat ca lich su" IsSelected="True"/>
+                                            <ComboBoxItem Content="LIVE"/>
+                                            <ComboBoxItem Content="Not LIVE"/>
+                                        </ComboBox>
+                                        <Button Grid.Column="4" Content="Xoa DB" Style="{StaticResource DangerBtnStyle}"
+                                                Padding="8,0" Height="24" FontSize="11"
+                                                Click="BtnClearHistoryDb_Click"
+                                                ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
+                                    </Grid>
+                                    <DataGrid Grid.Row="1" x:Name="GridHistoryResults" FontSize="11" RowHeight="24">
+                                        <DataGrid.RowStyle>
+                                            <Style TargetType="DataGridRow">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Result}" Value="LIVE">
+                                                        <Setter Property="Background" Value="#E6FAF0"/>
+                                                        <Setter Property="Foreground" Value="#15803D"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Result}" Value="Not LIVE">
+                                                        <Setter Property="Background" Value="#FEE8E8"/>
+                                                        <Setter Property="Foreground" Value="#B91C1C"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </DataGrid.RowStyle>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="So Dien Thoai" Binding="{Binding Phone}" Width="1.8*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                        <Setter Property="FontFamily"        Value="Consolas"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="Ket Qua" Binding="{Binding Result}" Width="1.1*">
+                                                <DataGridTextColumn.HeaderStyle>
+                                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.HeaderStyle>
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="VerticalAlignment"   Value="Center"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                        <Setter Property="FontWeight"          Value="Bold"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="Ten Viber" Binding="{Binding AccountName}" Width="1.5*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="Thoi Gian" Binding="{Binding Time}" Width="1.4*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                        <Setter Property="VerticalAlignment"   Value="Center"/>
+                                                        <Setter Property="Margin"              Value="0,0,8,0"/>
+                                                        <Setter Property="Foreground"          Value="#666666"/>
+                                                        <Setter Property="FontSize"            Value="10"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTemplateColumn Header="Hanh Dong" Width="80">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="Mo" Height="18" Padding="10,0" FontSize="10" Click="BtnOpenChat_Click">
+                                                            <Button.Style>
+                                                                <Style TargetType="Button" BasedOn="{StaticResource SuccessBtnStyle}">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Result}" Value="LIVE">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Button.Style>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </TabItem>
+                        </TabControl>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Gap -->
+            <Grid Grid.Column="1"/>
+
+            <!-- ═══ RIGHT: VIBER PREVIEW ═══ -->
+            <Border Grid.Column="2" Background="{StaticResource CardBg}"
+                    BorderBrush="{StaticResource Border1}" BorderThickness="1" ClipToBounds="True">
+                <Grid>
+                    <Border Height="38" Background="{StaticResource HeaderBg}" VerticalAlignment="Top"
+                            BorderBrush="{StaticResource Border2}" BorderThickness="0,0,0,1" Padding="10,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="7" Height="7" Fill="{StaticResource SuccessColor}" Margin="0,0,7,0"/>
+                                <TextBlock x:Name="TxtActiveProfile"
+                                           Text="Chua co Viber nao dang hoat dong"
+                                           Foreground="{StaticResource TextDark}" FontWeight="SemiBold" FontSize="12"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="BtnToggleDetach" Content="Mo ra ngoai"
+                                        Style="{StaticResource Btn}" Margin="0,0,4,0" Padding="9,3" FontSize="11"
+                                        Click="BtnToggleDetach_Click"/>
+                                <Button x:Name="BtnFocusKeyboard" Content="Focus ban phim"
+                                        Style="{StaticResource Btn}" Padding="9,3" FontSize="11"
+                                        Click="BtnFocusViber_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Grid x:Name="ViberContainer" Margin="0,38,0,0" Background="#5C51D6"
+                          SizeChanged="ViberContainer_SizeChanged"
+                          PreviewMouseDown="ViberContainer_PreviewMouseDown">
+                        <StackPanel x:Name="PanelPlaceholder" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="MAN CHIEU VIBER" Foreground="#C7C4F0"
+                                       FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Chon tai khoan va bam Mo / Login de nhung vao day"
+                                       Foreground="#A9A5E0" FontSize="11"
+                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <StackPanel x:Name="PanelDetachedNotice" HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock Text="[ ]" FontSize="32" Foreground="#C7C4F0"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="Viber dang chay doc lap" Foreground="#C7C4F0"
+                                       FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Nhan Mo ra ngoai de dua ve man chieu"
+                                       Foreground="#A9A5E0" FontSize="11"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ═══ STATUS BAR ═══ -->
+        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource Border1}"
+                BorderThickness="0,1,0,0" Padding="14,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" x:Name="TxtStatus" Text="San sang"
+                           Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                <TextBlock Grid.Column="1" x:Name="TxtSubStatus" Text="Premium"
+                           Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="SemiBold"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
