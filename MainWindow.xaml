@@ -759,53 +759,72 @@
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
+                                    <!-- Hang 1: Tim kiem + Bo loc -->
                                     <Grid Grid.Row="0" Margin="0,0,0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="110"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource Border1}" BorderThickness="1">
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Left" Text="🔍" VerticalAlignment="Center"
-                                                           Margin="4,0,3,0" FontSize="10" Foreground="{StaticResource TextMuted}"/>
-                                                <TextBox x:Name="TxtSearchHistoryResult" Background="Transparent" BorderThickness="0"
-                                                         Height="22" VerticalContentAlignment="Center" FontSize="11"
-                                                         TextChanged="TxtSearchHistoryResult_TextChanged"/>
-                                            </DockPanel>
-                                        </Border>
-                                        <ComboBox Grid.Column="2" x:Name="CmbFilterHistoryStatus" Height="24" FontSize="11"
-                                                  VerticalContentAlignment="Center" SelectionChanged="CmbFilterHistoryStatus_SelectionChanged">
-                                            <ComboBoxItem Content="Tat ca lich su" IsSelected="True"/>
-                                            <ComboBoxItem Content="LIVE"/>
-                                            <ComboBoxItem Content="Not LIVE"/>
-                                        </ComboBox>
-                                        <!-- ComboBox lọc theo phiên quét – được populate động từ DB -->
-                                        <ComboBox Grid.Column="4" x:Name="CmbFilterSession" Height="24" FontSize="11"
-                                                  VerticalContentAlignment="Center" SelectionChanged="CmbFilterSession_SelectionChanged"
-                                                  ToolTip="Loc theo phien quet">
-                                            <ComboBoxItem Content="Tat ca phien" IsSelected="True"/>
-                                        </ComboBox>
-                                        <Button Grid.Column="6" Content="Xoa DB" Style="{StaticResource DangerBtnStyle}"
-                                                Padding="8,0" Height="24" FontSize="11"
-                                                Click="BtnClearHistoryDb_Click"
-                                                ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
-                                        <Button Grid.Column="8" Content="Upload DB" Style="{StaticResource AddBtnStyle}"
-                                                Padding="8,0" Height="24" FontSize="11"
-                                                Click="BtnUploadHistoryDb_Click"
-                                                ToolTip="Upload/Import file ket qua quet vao SQLite DB"/>
-                                        <Button Grid.Column="10" Content="Xuat File" Style="{StaticResource Btn}"
-                                                Padding="8,0" Height="24" FontSize="11"
-                                                Click="BtnExportHistoryResults_Click"
-                                                ToolTip="Xuat toan bo lich su quet ra file Text/CSV"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="3"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Hang 1a: O tim kiem + loc trang thai + loc phien + nut lam moi -->
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="5"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="5"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="5"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- O tim kiem so dien thoai -->
+                                            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource Border1}" BorderThickness="1">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Left" Text="🔍" VerticalAlignment="Center"
+                                                               Margin="4,0,3,0" FontSize="10" Foreground="{StaticResource TextMuted}"/>
+                                                    <TextBox x:Name="TxtSearchHistoryResult" Background="Transparent" BorderThickness="0"
+                                                             Height="22" VerticalContentAlignment="Center" FontSize="11"
+                                                             TextChanged="TxtSearchHistoryResult_TextChanged"
+                                                             ToolTip="Tim kiem so dien thoai trong lich su"/>
+                                                </DockPanel>
+                                            </Border>
+                                            <!-- Loc trang thai LIVE / Not LIVE -->
+                                            <ComboBox Grid.Column="2" x:Name="CmbFilterHistoryStatus" Height="24" FontSize="11"
+                                                      VerticalContentAlignment="Center" SelectionChanged="CmbFilterHistoryStatus_SelectionChanged">
+                                                <ComboBoxItem Content="Tat ca lich su" IsSelected="True"/>
+                                                <ComboBoxItem Content="LIVE"/>
+                                                <ComboBoxItem Content="Not LIVE"/>
+                                            </ComboBox>
+                                            <!-- Loc theo phien quet -->
+                                            <ComboBox Grid.Column="4" x:Name="CmbFilterSession" Height="24" FontSize="11"
+                                                      VerticalContentAlignment="Center" SelectionChanged="CmbFilterSession_SelectionChanged"
+                                                      ToolTip="Loc theo phien quet">
+                                                <ComboBoxItem Content="Tat ca phien" IsSelected="True"/>
+                                            </ComboBox>
+                                            <!-- Nut lam moi du lieu -->
+                                            <Button Grid.Column="6" x:Name="BtnRefreshHistory" Content="↻ Cap nhat"
+                                                    Style="{StaticResource Btn}"
+                                                    Padding="8,0" Height="24" FontSize="11"
+                                                    Click="BtnRefreshHistory_Click"
+                                                    ToolTip="Cap nhat du lieu lich su moi nhat tu DB"/>
+                                        </Grid>
+
+                                        <!-- Hang 1b: Cac nut hanh dong -->
+                                        <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                            <Button Content="Xoa DB" Style="{StaticResource DangerBtnStyle}"
+                                                    Padding="8,0" Height="24" FontSize="11" Margin="0,0,4,0"
+                                                    Click="BtnClearHistoryDb_Click"
+                                                    ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
+                                            <Button Content="Upload DB" Style="{StaticResource AddBtnStyle}"
+                                                    Padding="8,0" Height="24" FontSize="11" Margin="0,0,4,0"
+                                                    Click="BtnUploadHistoryDb_Click"
+                                                    ToolTip="Upload/Import file ket qua quet vao SQLite DB"/>
+                                            <Button Content="Xuat File" Style="{StaticResource Btn}"
+                                                    Padding="8,0" Height="24" FontSize="11"
+                                                    Click="BtnExportHistoryResults_Click"
+                                                    ToolTip="Xuat toan bo lich su quet ra file Text/CSV"/>
+                                        </StackPanel>
                                     </Grid>
                                     <DataGrid Grid.Row="1" x:Name="GridHistoryResults" FontSize="11" RowHeight="24">
                                         <DataGrid.RowStyle>

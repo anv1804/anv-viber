@@ -2305,6 +2305,13 @@ namespace ViberManager
             LoadHistoryResults();
         }
 
+        private void BtnRefreshHistory_Click(object sender, RoutedEventArgs e)
+        {
+            // Làm mới danh sách phiên và load lại toàn bộ dữ liệu từ DB
+            RefreshSessionList();
+            LoadHistoryResults();
+        }
+
         private void BtnHistoryPrevPage_Click(object sender, RoutedEventArgs e)
         {
             if (_historyCurrentPage > 1)
