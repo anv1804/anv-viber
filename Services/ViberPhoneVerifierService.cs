@@ -89,22 +89,65 @@ namespace ViberManager.Services
 
                 await Task.Delay(1200); // Chờ Viber hiển thị danh sách kết quả
 
-                // 4. Click chính xác vào nút Bắt đầu cuộc trò chuyện thông qua tọa độ DOM thực (Không di chuột)
+                // 4. Click vào kết quả tìm kiếm để mở chat
                 bool clickedDom = ViberAutomationService.AutomationClickStartChatButton(hwnd, phone);
                 if (!clickedDom)
                 {
-                    // Click tương đối tọa độ cố định bằng PostMessage (Không di chuyển chuột thật)
+                    // Fallback: PostMessage click tọa độ tương đối
                     ViberAutomationService.ClickRelative(hwnd, 150, 195);
                     await Task.Delay(150);
                     ViberAutomationService.ClickRelative(hwnd, 150, 195);
                 }
-                
-                // 5. Đợi 1.5 giây để đảm bảo Viber tải và render hoàn chỉnh trang chat mới.
-                // Gọi ForceRealignment liên tục mỗi 150ms để giật khít khung hình ngay lập tức khi Qt đổi layout.
+
+                // 5. Đợi Viber render trang chat (1.5s với ForceRealignment mỗi 150ms)
                 for (int i = 0; i < 10; i++)
                 {
                     await Task.Delay(150);
                     ViberHost.ForceRealignment(hwnd);
+                }
+
+                // 5b. Kiểm tra xem chat có thực sự mở không (text-based, không phụ thuộc tọa độ)
+                //     Nếu chưa mở (vẫn ở màn hình tìm kiếm / home), thử nhấn Enter để chọn kết quả đầu tiên
+                string quickCheck = ViberAutomationService.AutomationCheckViberStatus(hwnd);
+                bool chatOpened = quickCheck != "UNKNOWN_OCR_FALLBACK";
+
+                if (!chatOpened)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[VERIFY SĐT {phone}] Chat chưa mở, thử nhấn Enter...");
+                    // Enter thường chọn kết quả đầu tiên trong danh sách tìm kiếm Viber
+                    ViberAutomationService.SendVirtualKey(hwnd, 0x0D); // VK_RETURN
+                    await Task.Delay(300);
+
+                    // Nếu Enter cũng không được, thử click nhiều vị trí khác nhau
+                    ViberAutomationService.ClickRelative(hwnd, 170, 180);
+                    await Task.Delay(150);
+                    ViberAutomationService.ClickRelative(hwnd, 170, 220);
+                    await Task.Delay(150);
+
+                    for (int i = 0; i < 5; i++)
+                    {
+                        await Task.Delay(150);
+                        ViberHost.ForceRealignment(hwnd);
+                    }
+
+                    quickCheck = ViberAutomationService.AutomationCheckViberStatus(hwnd);
+                    chatOpened = quickCheck != "UNKNOWN_OCR_FALLBACK";
+                    System.Diagnostics.Debug.WriteLine($"[VERIFY SĐT {phone}] Sau retry: chatOpened={chatOpened}, status={quickCheck}");
+                }
+
+                // 5c. Nếu AutomationCheckViberStatus đã cho kết quả rõ ràng → dùng luôn, không cần phân tích thêm
+                if (chatOpened)
+                {
+                    if (quickCheck == "Không biết (Unknown)")
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[QUICK CHECK SĐT {phone}] AutomationCheckViberStatus → Not LIVE");
+                        return "Not LIVE";
+                    }
+                    if (quickCheck == "Có Viber (LIVE)")
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[QUICK CHECK SĐT {phone}] AutomationCheckViberStatus → LIVE");
+                        return "LIVE";
+                    }
                 }
 
                 // ----------------------------------------------------
