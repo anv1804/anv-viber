@@ -156,11 +156,20 @@ namespace ViberManager
                 {
                     WINDOWPOS pos = Marshal.PtrToStructure<WINDOWPOS>(posPtr);
                     
-                    // Nếu KHÔNG PHẢI do ViberHost chủ động gọi lệnh resize
-                    if (!_isInternalResizing)
+                    // Nếu KHÔNG PHẢI do ViberHost chủ động gọi lệnh resize (Viber tự ý co giãn do mở cột Info)
+                    if (!_isInternalResizing && _currentPhysicalW > 0 && _currentPhysicalH > 0)
                     {
-                        // Khóa cứng vị trí và kích thước, không cho phép Viber tự ý thay đổi tọa độ
-                        pos.flags |= SWP_NOMOVE | SWP_NOSIZE;
+                        // Cưỡng chế kích thước và vị trí của Viber phải khớp chính xác tuyệt đối với khung chứa
+                        pos.x = _currentPhysicalX;
+                        pos.y = _currentPhysicalY;
+                        pos.cx = _currentPhysicalW;
+                        pos.cy = _currentPhysicalH;
+
+                        // Xóa cờ NOMOVE và NOSIZE để Windows và Qt nhận được thông số giới hạn này,
+                        // từ đó tự động co giãn các cột bên trong cho khít màn hình thay vì đẩy tràn ra ngoài
+                        pos.flags &= ~SWP_NOMOVE;
+                        pos.flags &= ~SWP_NOSIZE;
+
                         Marshal.StructureToPtr(pos, posPtr, true);
                     }
                 }
