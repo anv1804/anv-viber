@@ -111,9 +111,15 @@ namespace ViberManager
             // Khởi tạo Database SQLite cục bộ lưu lịch sử verify
             InitHistoryDatabase();
 
-            // Cấu hình chọn Viber profile làm mẫu test
-            CmbVerifyProfile.ItemsSource = Profiles;
-            if (Profiles.Count > 0)
+            // Cấu hình chọn Viber profile làm mẫu test (Chỉ hiển thị các tài khoản ở trạng thái 'Đang nhúng')
+            var verifyView = CollectionViewSource.GetDefaultView(Profiles);
+            verifyView.Filter = item =>
+            {
+                var profile = item as ViberProfile;
+                return profile != null && profile.Status == "Đang nhúng";
+            };
+            CmbVerifyProfile.ItemsSource = verifyView;
+            if (CmbVerifyProfile.Items.Count > 0)
             {
                 CmbVerifyProfile.SelectedIndex = 0;
             }
@@ -237,6 +243,20 @@ namespace ViberManager
             foreach (ViberProfile p in _profilesView)
                 p.DisplayIndex = idx++;
             _profilesView.Refresh();
+
+            // Refresh danh sách tài khoản test để phản ánh trạng thái 'Đang nhúng'
+            var verifyView = CollectionViewSource.GetDefaultView(CmbVerifyProfile.ItemsSource);
+            if (verifyView != null)
+            {
+                verifyView.Refresh();
+                
+                // Tự động chọn tài khoản đầu tiên nếu chưa chọn gì hoặc tài khoản cũ không còn 'Đang nhúng'
+                if (CmbVerifyProfile.SelectedIndex == -1 && CmbVerifyProfile.Items.Count > 0)
+                {
+                    CmbVerifyProfile.SelectedIndex = 0;
+                }
+            }
+
             UpdateProfileCount();
         }
 

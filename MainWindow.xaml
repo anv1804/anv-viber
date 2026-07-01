@@ -585,7 +585,7 @@
                             <TextBlock Grid.Column="0" Text="Acc test:" FontSize="11"
                                        Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <ComboBox Grid.Column="1" x:Name="CmbVerifyProfile" Height="24" FontSize="11"
-                                      DisplayMemberPath="Name" VerticalContentAlignment="Center"/>
+                                      DisplayMemberPath="DisplayName" VerticalContentAlignment="Center"/>
                             <Button Grid.Column="2" Content="Nap File" Style="{StaticResource Btn}"
                                     Height="24" FontSize="11" Margin="4,0,0,0" Click="BtnImportVerifyPhones_Click"/>
                             <Button Grid.Column="3" x:Name="BtnStartVerify" Content="Bat dau kiem tra"

@@ -45,5 +45,8 @@ namespace ViberManager.Models
 
         [JsonIgnore]
         public IntPtr WindowHandle { get; set; } = IntPtr.Zero;
+
+        [JsonIgnore]
+        public string DisplayName => string.IsNullOrEmpty(Phone) ? Name : $"{Name} ({Phone})";
     }
 }
