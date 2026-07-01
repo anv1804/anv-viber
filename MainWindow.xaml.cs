@@ -1504,31 +1504,6 @@ namespace ViberManager
                 return;
             }
 
-            // 1. Tạm thời giải phóng Viber ra ngoài màn hình lớn để quét chính xác 100% không lo lệch màn chiếu
-            try
-            {
-                // Sử dụng cơ chế Detach chính thức của Host để đẩy Viber ra ngoài an toàn
-                if (_currentHost != null)
-                {
-                    _currentHost.Detach();
-                    _currentHost.Visibility = System.Windows.Visibility.Collapsed;
-                }
-                
-                BtnToggleDetach.Content = "🔗 Gắn lại cửa sổ";
-                PanelDetachedNotice.Visibility = Visibility.Visible;
-
-                // THU NHỎ CỬA SỔ CHÍNH để lộ hoàn toàn cửa sổ Viber ngoài Desktop
-                Dispatcher.Invoke(() =>
-                {
-                    this.WindowState = WindowState.Minimized;
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Lỗi giải phóng Viber: {ex.Message}");
-            }
-            await Task.Delay(1500); // Chờ Viber ổn định ngoài màn hình lớn (1.5 giây)
-
             _isVerifyingPhones = true;
             BtnStartVerify.Content = "⏹ Dừng kiểm tra";
             BtnStartVerify.Style = (Style)FindResource("DangerBtnStyle");
@@ -1582,14 +1557,7 @@ namespace ViberManager
             }
             finally
             {
-                // KHÔI PHỤC CỬA SỔ CHÍNH hiển thị lên màn hình
-                Dispatcher.Invoke(() =>
-                {
-                    this.WindowState = WindowState.Normal;
-                    this.Activate(); // Đưa ViberManager lên Foreground trở lại
-                });
-
-                // 2. Thu hồi nhúng Viber trở lại ViberManager sau khi kết thúc
+                // 2. Thu hồi nhúng Viber trở lại ViberManager sau khi kết thúc (nếu người dùng có lỡ tay gỡ ra ngoài)
                 try
                 {
                     if (_currentHost != null && _currentHost.IsDetached)

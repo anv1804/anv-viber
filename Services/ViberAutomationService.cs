@@ -39,6 +39,9 @@ namespace ViberManager.Services
         private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
         [DllImport("user32.dll")]
+        private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+        [DllImport("user32.dll")]
         private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         private const uint WM_LBUTTONDOWN = 0x0201;
@@ -71,16 +74,37 @@ namespace ViberManager.Services
             }
         }
 
-        /// <summary>
-        /// Chụp ảnh màn hình cửa sổ Viber theo tọa độ chuẩn an toàn của Windows
-        /// </summary>
+        private static bool IsValidCapture(Bitmap bmp)
+        {
+            try
+            {
+                if (bmp.Width < 50 || bmp.Height < 50) return false;
+                Color c1 = bmp.GetPixel(10, 10);
+                Color c2 = bmp.GetPixel(bmp.Width / 2, bmp.Height / 2);
+                Color c3 = bmp.GetPixel(bmp.Width - 10, bmp.Height - 10);
+
+                if (c1.A == 0 && c2.A == 0 && c3.A == 0) return false;
+                if (c1.R == 0 && c1.G == 0 && c1.B == 0 &&
+                    c2.R == 0 && c2.G == 0 && c2.B == 0 &&
+                    c3.R == 0 && c3.G == 0 && c3.B == 0) return false;
+                if (c1.R == 255 && c1.G == 255 && c1.B == 255 &&
+                    c2.R == 255 && c2.G == 255 && c2.B == 255 &&
+                    c3.R == 255 && c3.G == 255 && c3.B == 255) return false;
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static Bitmap? CaptureWindow(IntPtr hwnd)
         {
             try
             {
                 if (hwnd == IntPtr.Zero || !GetWindowRect(hwnd, out RECT rect)) return null;
 
-                // Sử dụng trực tiếp tọa độ gốc trả về (không nhân scale để tránh bị nhân đôi DPI trên một số máy)
                 int width = rect.Right - rect.Left;
                 int height = rect.Bottom - rect.Top;
                 int left = rect.Left;
@@ -88,26 +112,54 @@ namespace ViberManager.Services
 
                 if (width <= 0 || height <= 0) return null;
 
+                // 1. Thử chụp ảnh ngầm bằng PrintWindow (PW_RENDERFULLCONTENT = 2) để không chiếm màn hình
+                Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+                bool success = false;
+                using (Graphics gfx = Graphics.FromImage(bmp))
+                {
+                    IntPtr hdc = gfx.GetHdc();
+                    try
+                    {
+                        success = PrintWindow(hwnd, hdc, 2);
+                    }
+                    finally
+                    {
+                        gfx.ReleaseHdc(hdc);
+                    }
+                }
+
+                if (success && IsValidCapture(bmp))
+                {
+                    try
+                    {
+                        string debugPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_capture.png");
+                        bmp.Save(debugPath, ImageFormat.Png);
+                    }
+                    catch { }
+                    return bmp;
+                }
+
+                bmp.Dispose();
+
+                // 2. Fallback cuối cùng nếu chụp ngầm lỗi (chụp đè màn hình)
                 BringWindowToTop(hwnd);
                 SetForegroundWindow(hwnd);
                 System.Threading.Thread.Sleep(150);
 
-                Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-                using (Graphics gfx = Graphics.FromImage(bmp))
+                Bitmap fallbackBmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+                using (Graphics gfx = Graphics.FromImage(fallbackBmp))
                 {
                     gfx.CopyFromScreen(left, top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
                 }
 
-                // Lưu ảnh debug kiểm tra trực quan
                 try
                 {
                     string debugPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_capture.png");
-                    bmp.Save(debugPath, ImageFormat.Png);
-                    System.Diagnostics.Debug.WriteLine($"Đã lưu ảnh debug Viber tại: {debugPath}");
+                    fallbackBmp.Save(debugPath, ImageFormat.Png);
                 }
                 catch { }
 
-                return bmp;
+                return fallbackBmp;
             }
             catch (Exception ex)
             {
@@ -329,12 +381,53 @@ namespace ViberManager.Services
 
                 if (btnElement != null)
                 {
+                    // 1. Thử dùng InvokePattern (Không di chuyển chuột)
+                    try
+                    {
+                        if (btnElement.TryGetCurrentPattern(InvokePattern.Pattern, out object pattern))
+                        {
+                            ((InvokePattern)pattern).Invoke();
+                            System.Diagnostics.Debug.WriteLine($"[UIA INVOKE] Đã click thành công nút Bắt đầu cuộc trò chuyện.");
+                            return true;
+                        }
+                    }
+                    catch { }
+
+                    // 2. Thử dùng SelectionItemPattern (Nếu là ListItem)
+                    try
+                    {
+                        if (btnElement.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object pattern))
+                        {
+                            ((SelectionItemPattern)pattern).Select();
+                            System.Diagnostics.Debug.WriteLine($"[UIA SELECT] Đã chọn thành công cuộc trò chuyện.");
+                            return true;
+                        }
+                    }
+                    catch { }
+
+                    // 3. Fallback dùng PostMessage click tương đối (Không di chuyển chuột vật lý)
                     System.Windows.Rect bounds = btnElement.Current.BoundingRectangle;
                     if (bounds != System.Windows.Rect.Empty)
                     {
                         int clickX = (int)(bounds.Left + (bounds.Width / 2));
                         int clickY = (int)(bounds.Top + (bounds.Height / 2));
 
+                        POINT screenPt = new POINT(clickX, clickY);
+                        if (ScreenToClient(hwnd, ref screenPt))
+                        {
+                            IntPtr lParam = (IntPtr)((screenPt.Y << 16) | (screenPt.X & 0xFFFF));
+                            PostMessage(hwnd, WM_LBUTTONDOWN, (IntPtr)1, lParam);
+                            System.Threading.Thread.Sleep(30);
+                            PostMessage(hwnd, WM_LBUTTONUP, IntPtr.Zero, lParam);
+                            System.Threading.Thread.Sleep(50);
+                            PostMessage(hwnd, WM_LBUTTONDOWN, (IntPtr)1, lParam);
+                            System.Threading.Thread.Sleep(30);
+                            PostMessage(hwnd, WM_LBUTTONUP, IntPtr.Zero, lParam);
+                            System.Diagnostics.Debug.WriteLine($"[POST MESSAGE CLICK] Đã click tại client X={screenPt.X}, Y={screenPt.Y}");
+                            return true;
+                        }
+
+                        // 4. Fallback cuối cùng nếu các cách trên đều lỗi mới di chuyển chuột thật
                         SetCursorPos(clickX, clickY);
                         System.Threading.Thread.Sleep(50);
                         const uint MOUSEEVENTF_LEFTDOWN = 0x02;
@@ -342,13 +435,7 @@ namespace ViberManager.Services
                         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                         System.Threading.Thread.Sleep(30);
                         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-
-                        System.Threading.Thread.Sleep(100);
-                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                        System.Threading.Thread.Sleep(30);
-                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-
-                        System.Diagnostics.Debug.WriteLine($"Đã click nút Bắt đầu cuộc trò chuyện thành công qua DOM tại X={clickX}, Y={clickY}");
+                        System.Diagnostics.Debug.WriteLine($"[PHYSICAL CLICK FALLBACK] Đã di chuột click tại X={clickX}, Y={clickY}");
                         return true;
                     }
                 }
