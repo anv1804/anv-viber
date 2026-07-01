@@ -93,20 +93,15 @@ namespace ViberManager.Services
                 bool clickedDom = ViberAutomationService.AutomationClickStartChatButton(hwnd, phone);
                 if (!clickedDom)
                 {
-                    // Fallback: chuột thật tại vị trí tỷ lệ (không hardcode pixel tuyệt đối)
-                    // Viber Qt không xử lý WM_LBUTTONDOWN từ PostMessage → phải dùng mouse_event thật
+                    // Fallback: click ảo ngầm (không di chuyển chuột thật)
                     if (ViberAutomationService.GetWindowRect(hwnd, out ViberAutomationService.RECT fbRect))
                     {
                         int fbW = fbRect.Right - fbRect.Left;
                         int fbH = fbRect.Bottom - fbRect.Top;
                         // Click tại ~18% chiều rộng, ~35% chiều cao → vùng kết quả tìm kiếm sidebar
-                        int fbX = fbRect.Left + (int)(fbW * 0.18);
-                        int fbY = fbRect.Top  + (int)(fbH * 0.35);
-                        ViberAutomationService.ClickSystemRelative(hwnd,
-                            (int)(fbW * 0.18), (int)(fbH * 0.35));
-                        await Task.Delay(150);
-                        ViberAutomationService.ClickSystemRelative(hwnd,
-                            (int)(fbW * 0.18), (int)(fbH * 0.35));
+                        ViberAutomationService.ClickRelative(hwnd, (int)(fbW * 0.18), (int)(fbH * 0.35));
+                        await Task.Delay(100);
+                        ViberAutomationService.ClickRelative(hwnd, (int)(fbW * 0.18), (int)(fbH * 0.35));
                     }
                 }
 

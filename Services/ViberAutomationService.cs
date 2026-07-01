@@ -459,19 +459,28 @@ namespace ViberManager.Services
                     }
                     catch { }
 
-                    // Bước 3: Chuột thật tại tọa độ thực của element (không hardcode, lấy từ DOM)
+                    // Bước 3: Click ảo ngầm bằng PostMessage (Không chiếm chuột vật lý của người dùng)
                     System.Windows.Rect bounds = btnElement.Current.BoundingRectangle;
-                    if (bounds != System.Windows.Rect.Empty)
+                    if (bounds != System.Windows.Rect.Empty && GetWindowRect(hwnd, out RECT winRect))
                     {
                         int clickX = (int)(bounds.Left + bounds.Width / 2);
                         int clickY = (int)(bounds.Top + bounds.Height / 2);
-                        SetCursorPos(clickX, clickY);
-                        System.Threading.Thread.Sleep(50);
-                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                        System.Threading.Thread.Sleep(30);
-                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                        System.Diagnostics.Debug.WriteLine($"[REAL MOUSE CLICK] tại screen X={clickX}, Y={clickY}");
-                        return true;
+
+                        // Đổi tọa độ màn hình sang tọa độ Client của Viber để dùng PostMessage
+                        POINT screenPt = new POINT(clickX, clickY);
+                        if (ScreenToClient(hwnd, ref screenPt))
+                        {
+                            IntPtr lParam = (IntPtr)((screenPt.Y << 16) | (screenPt.X & 0xFFFF));
+                            PostMessage(hwnd, WM_LBUTTONDOWN, (IntPtr)1, lParam);
+                            System.Threading.Thread.Sleep(30);
+                            PostMessage(hwnd, WM_LBUTTONUP, IntPtr.Zero, lParam);
+                            System.Threading.Thread.Sleep(50);
+                            PostMessage(hwnd, WM_LBUTTONDOWN, (IntPtr)1, lParam);
+                            System.Threading.Thread.Sleep(30);
+                            PostMessage(hwnd, WM_LBUTTONUP, IntPtr.Zero, lParam);
+                            System.Diagnostics.Debug.WriteLine($"[POST MESSAGE VIRTUAL CLICK] OK");
+                            return true;
+                        }
                     }
                 }
             }
