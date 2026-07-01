@@ -144,7 +144,7 @@ namespace ViberManager
             verifyView.Filter = item =>
             {
                 var profile = item as ViberProfile;
-                return profile != null && profile.Status == "Đang nhúng";
+                return profile != null; // Trả về tất cả các profile (cho phép chọn bất kỳ)
             };
             CmbVerifyProfile.ItemsSource = verifyView;
             if (CmbVerifyProfile.Items.Count > 0)
@@ -333,13 +333,12 @@ namespace ViberManager
                 p.DisplayIndex = idx++;
             _profilesView.Refresh();
 
-            // Refresh danh sách tài khoản test để phản ánh trạng thái 'Đang nhúng'
+            // Refresh danh sách tài khoản test
             var verifyView = CmbVerifyProfile.ItemsSource as System.Windows.Data.ListCollectionView;
             if (verifyView != null)
             {
                 verifyView.Refresh();
                 
-                // Tự động chọn tài khoản đầu tiên nếu chưa chọn gì hoặc tài khoản cũ không còn 'Đang nhúng'
                 if (CmbVerifyProfile.SelectedIndex == -1 && CmbVerifyProfile.Items.Count > 0)
                 {
                     CmbVerifyProfile.SelectedIndex = 0;
@@ -1575,10 +1574,31 @@ namespace ViberManager
         {
             if (GridProfiles.SelectedItem is ViberProfile selected)
             {
+                // Detach profile cũ trước khi chuyển sang profile mới để tránh tranh chấp parent window
+                if (_currentActiveProfile != null && _currentActiveProfile != selected && _currentHost != null)
+                {
+                    try
+                    {
+                        _currentHost.Visibility = Visibility.Collapsed;
+                        // Trả parent về 0 (Desktop) trước khi giải phóng hoặc ẩn
+                        Win32Helper.SetParent(_currentActiveProfile.WindowHandle, IntPtr.Zero);
+                    }
+                    catch { }
+                }
+
                 if (selected.Status == "Đang nhúng" && selected.WindowHandle != IntPtr.Zero)
                 {
                     _currentActiveProfile = selected;
                     EmbedViberWindow(selected.WindowHandle);
+                }
+                else
+                {
+                    // Nếu profile này chưa nhúng, ẩn màn chiếu cũ
+                    ViberContainer.Children.Clear();
+                    PanelPlaceholder.Visibility = Visibility.Visible;
+                    TxtActiveProfile.Text = "Không có tài khoản hoạt động";
+                    _currentActiveProfile = null;
+                    _currentHost = null;
                 }
             }
         }
