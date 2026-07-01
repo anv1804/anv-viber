@@ -161,8 +161,10 @@ namespace ViberManager
                         pos.cx = _currentPhysicalW;
                         pos.cy = _currentPhysicalH;
 
-                        // Set các cờ này để Windows bỏ qua việc tự dịch chuyển vị trí của Viber con
-                        pos.flags |= SWP_NOMOVE | SWP_NOSIZE;
+                        // Xóa các cờ NOMOVE và NOSIZE để ép Windows phải áp dụng tọa độ và kích thước chuẩn của container
+                        pos.flags &= ~SWP_NOMOVE;
+                        pos.flags &= ~SWP_NOSIZE;
+                        
                         Marshal.StructureToPtr(pos, posPtr, true);
                     }
                 }
