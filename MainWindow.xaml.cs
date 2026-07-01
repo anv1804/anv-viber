@@ -1050,12 +1050,12 @@ namespace ViberManager
                 {
                     TxtActiveProfile.Text = $"Đang hiển thị: {_currentActiveProfile.Name} ({_currentActiveProfile.Phone})";
                     
-                    // Ẩn tất cả các host khác
+                    // Ẩn tất cả các cửa sổ Viber khác bằng Win32 ShowWindow
                     foreach (var profile in Profiles)
                     {
-                        if (profile != _currentActiveProfile && profile.AttachedHost is ViberHost host)
+                        if (profile != _currentActiveProfile && profile.WindowHandle != IntPtr.Zero)
                         {
-                            host.Visibility = Visibility.Collapsed;
+                            try { Win32Helper.ShowWindow(profile.WindowHandle, Win32Helper.SW_HIDE); } catch { }
                         }
                     }
 
@@ -1064,6 +1064,10 @@ namespace ViberManager
                     {
                         _currentHost = cachedHost;
                         cachedHost.Visibility = Visibility.Visible;
+                        
+                        // Hiện cửa sổ được chọn
+                        Win32Helper.ShowWindow(_currentActiveProfile.WindowHandle, Win32Helper.SW_SHOW);
+                        
                         if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
                         {
                             cachedHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
@@ -1079,6 +1083,8 @@ namespace ViberManager
                         _currentActiveProfile.AttachedHost = _currentHost;
                         ViberContainer.Children.Add(_currentHost);
                         
+                        Win32Helper.ShowWindow(_currentActiveProfile.WindowHandle, Win32Helper.SW_SHOW);
+
                         if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
                         {
                             _currentHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
@@ -1606,16 +1612,16 @@ namespace ViberManager
         {
             if (GridProfiles.SelectedItem is ViberProfile selected)
             {
-                // 1. Ẩn tất cả các ViberHost của các profile khác trong WPF Container
+                // 1. Ẩn tất cả các cửa sổ Viber của các profile khác bằng Win32 ShowWindow
                 foreach (var profile in Profiles)
                 {
-                    if (profile != selected && profile.AttachedHost is ViberHost host)
+                    if (profile != selected && profile.WindowHandle != IntPtr.Zero)
                     {
-                        host.Visibility = Visibility.Collapsed;
-                        if (profile.WindowHandle != IntPtr.Zero)
+                        try
                         {
                             Win32Helper.ShowWindow(profile.WindowHandle, Win32Helper.SW_HIDE);
                         }
+                        catch { }
                     }
                 }
 
@@ -1626,15 +1632,17 @@ namespace ViberManager
                     PanelPlaceholder.Visibility = Visibility.Collapsed;
                     TxtActiveProfile.Text = $"Đang hiển thị: {selected.Name} ({selected.Phone})";
 
+                    // Hiện cửa sổ Viber được chọn ở mức Win32
                     Win32Helper.ShowWindow(selected.WindowHandle, Win32Helper.SW_SHOW);
 
                     // Lấy hoặc khởi tạo ViberHost của riêng profile này
                     if (selected.AttachedHost is ViberHost cachedHost)
                     {
                         _currentHost = cachedHost;
+                        
+                        // Đảm bảo host của chúng ta luôn Visible ở mức WPF
                         cachedHost.Visibility = Visibility.Visible;
                         
-                        // Đưa lên trên cùng và kích hoạt lại kích thước
                         if (ViberContainer.ActualWidth > 0 && ViberContainer.ActualHeight > 0)
                         {
                             cachedHost.Resize(ViberContainer.ActualWidth, ViberContainer.ActualHeight);
