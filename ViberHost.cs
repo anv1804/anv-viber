@@ -247,12 +247,21 @@ namespace ViberManager
                 string viberPcDir = System.IO.Path.Combine(_profilePath, "AppData", "Roaming", "ViberPC");
                 if (System.IO.Directory.Exists(viberPcDir))
                 {
-                    // viber.db chỉ sinh ra khi tài khoản đã được kích hoạt/đăng nhập thành công
-                    var dbFiles = System.IO.Directory.GetFiles(viberPcDir, "viber.db", System.IO.SearchOption.AllDirectories);
-                    return dbFiles.Length > 0;
+                    // Chỉ quét các thư mục con trực tiếp của ViberPC để tránh quét toàn bộ đệ quy gây lỗi UnauthorizedAccess
+                    foreach (string dir in System.IO.Directory.GetDirectories(viberPcDir))
+                    {
+                        string dbPath = System.IO.Path.Combine(dir, "viber.db");
+                        if (System.IO.File.Exists(dbPath))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Lỗi kiểm tra viber.db: " + ex.Message);
+            }
             return false;
         }
 
