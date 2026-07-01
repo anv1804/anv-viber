@@ -1574,14 +1574,15 @@ namespace ViberManager
         {
             if (GridProfiles.SelectedItem is ViberProfile selected)
             {
-                // Detach profile cũ trước khi chuyển sang profile mới để tránh tranh chấp parent window
-                if (_currentActiveProfile != null && _currentActiveProfile != selected && _currentHost != null)
+                // Thay vì detach làm bật cửa sổ ra ngoài Desktop, ta ẩn cửa sổ của profile cũ đi (vẫn giữ parent trong container)
+                if (_currentActiveProfile != null && _currentActiveProfile != selected)
                 {
                     try
                     {
-                        _currentHost.Visibility = Visibility.Collapsed;
-                        // Trả parent về 0 (Desktop) trước khi giải phóng hoặc ẩn
-                        Win32Helper.SetParent(_currentActiveProfile.WindowHandle, IntPtr.Zero);
+                        if (_currentActiveProfile.WindowHandle != IntPtr.Zero)
+                        {
+                            Win32Helper.ShowWindow(_currentActiveProfile.WindowHandle, Win32Helper.SW_HIDE);
+                        }
                     }
                     catch { }
                 }
@@ -1589,6 +1590,10 @@ namespace ViberManager
                 if (selected.Status == "Đang nhúng" && selected.WindowHandle != IntPtr.Zero)
                 {
                     _currentActiveProfile = selected;
+                    
+                    // Hiện cửa sổ Viber của profile được chọn
+                    Win32Helper.ShowWindow(selected.WindowHandle, Win32Helper.SW_SHOW);
+                    
                     EmbedViberWindow(selected.WindowHandle);
                 }
                 else
