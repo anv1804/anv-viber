@@ -330,26 +330,33 @@ namespace ViberManager.Services
                 {
                     string text = el.Current.Name.ToLower();
 
-                    if (text.Contains("không biết") || 
-                        text.Contains("khong biet") || 
-                        text.Contains("viber out") || 
-                        text.Contains("chưa có trên viber") || 
-                        text.Contains("thực hiện cuộc gọi viber out"))
+                    // CHỈ khớp các cụm từ ĐỘC QUYỀN trên màn hình "Không biết" (số không có Viber)
+                    // KHÔNG dùng "viber out" vì nút đó xuất hiện trên HEADER của MỌI cuộc chat (kể cả LIVE)
+                    if (text.Contains("không biết") ||
+                        text.Contains("khong biet") ||
+                        text.Contains("chưa có trên viber") ||
+                        text.Contains("thực hiện cuộc gọi viber out") ||
+                        text.Contains("make a viber out call") ||
+                        text.Contains("not on viber yet"))
                     {
                         hasViberOutSign = true;
                     }
 
-                    if (text.Contains("chặn") || 
-                        text.Contains("tin nhắn trong trò chuyện") || 
-                        text.Contains("lưu lại bằng viber") || 
-                        text.Contains("nhập tin nhắn"))
+                    // Các cụm từ CHỈ xuất hiện khi chat thực sự mở với số CÓ Viber
+                    // "lưu lại bằng viber" xuất hiện cả ở Not-LIVE nên KHÔNG dùng
+                    if (text.Contains("nhập tin nhắn") ||
+                        text.Contains("type a message") ||
+                        text.Contains("tin nhắn trong trò chuyện này là riêng tư") ||
+                        text.Contains("messages in this chat are private"))
                     {
                         hasLiveSign = true;
                     }
                 }
 
-                if (hasViberOutSign) return "Không biết (Unknown)";
+                // hasLiveSign có độ ưu tiên thấp hơn: nếu cả 2 đều true thì ưu tiên Unknown
+                if (hasViberOutSign && !hasLiveSign) return "Không biết (Unknown)";
                 if (hasLiveSign) return "Có Viber (LIVE)";
+                if (hasViberOutSign) return "Không biết (Unknown)";
             }
             catch (Exception ex)
             {
@@ -366,97 +373,111 @@ namespace ViberManager.Services
                 AutomationElement viberEl = AutomationElement.FromHandle(hwnd);
                 if (viberEl == null) return false;
 
+                // Chuẩn bị số định dạng quốc tế để tìm kiếm (+84...)
+                string phoneIntl = phone.StartsWith("0") ? "+84" + phone.Substring(1) : phone;
+
                 AutomationElement btnElement = null;
 
-                AutomationElementCollection texts = viberEl.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text));
+                // Lớp 1: Tìm text element khớp số điện thoại (cả định dạng 0x và +84x)
+                AutomationElementCollection texts = viberEl.FindAll(TreeScope.Descendants,
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text));
                 foreach (AutomationElement el in texts)
                 {
                     string name = el.Current.Name;
-                    if (name.Contains("Bắt đầu cuộc trò chuyện") || name.Contains("trò chuyện") || name.Contains(phone))
+                    if (name.Contains("Bắt đầu cuộc trò chuyện") || name.Contains("trò chuyện") ||
+                        name.Contains(phone) || name.Contains(phoneIntl))
                     {
                         btnElement = el;
                         break;
                     }
                 }
 
+                // Lớp 2: Tìm ListItem khớp số điện thoại
                 if (btnElement == null)
                 {
-                    AutomationElementCollection listItems = viberEl.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem));
+                    AutomationElementCollection listItems = viberEl.FindAll(TreeScope.Descendants,
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem));
                     foreach (AutomationElement el in listItems)
                     {
                         string name = el.Current.Name;
-                        if (name.Contains("Bắt đầu") || name.Contains("trò chuyện") || name.Contains(phone))
+                        if (name.Contains("Bắt đầu") || name.Contains("trò chuyện") ||
+                            name.Contains(phone) || name.Contains(phoneIntl))
                         {
                             btnElement = el;
                             break;
+                        }
+                    }
+
+                    // Lớp 3: Tìm BẤT KỲ ListItem nào trong sidebar trái (không cần khớp text)
+                    // → Hoạt động với mọi ngôn ngữ Viber, mọi phiên bản
+                    if (btnElement == null && GetWindowRect(hwnd, out RECT winRect))
+                    {
+                        int sidebarMaxX = winRect.Left + (winRect.Right - winRect.Left) / 3;
+                        AutomationElementCollection allListItems = viberEl.FindAll(TreeScope.Descendants,
+                            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem));
+                        foreach (AutomationElement el in allListItems)
+                        {
+                            try
+                            {
+                                var bound = el.Current.BoundingRectangle;
+                                // Chỉ lấy ListItem nằm trong vùng sidebar (1/3 bên trái)
+                                if (bound.Left < sidebarMaxX && bound.Height > 20 && bound.Width > 50)
+                                {
+                                    btnElement = el;
+                                    System.Diagnostics.Debug.WriteLine($"[UIA FALLBACK] Tìm thấy ListItem sidebar: '{el.Current.Name}'");
+                                    break;
+                                }
+                            }
+                            catch { }
                         }
                     }
                 }
 
                 if (btnElement != null)
                 {
-                    // 1. Thử dùng InvokePattern (Không di chuyển chuột)
+                    // Bước 1: InvokePattern
                     try
                     {
-                        if (btnElement.TryGetCurrentPattern(InvokePattern.Pattern, out object pattern))
+                        if (btnElement.TryGetCurrentPattern(InvokePattern.Pattern, out object invokeP))
                         {
-                            ((InvokePattern)pattern).Invoke();
-                            System.Diagnostics.Debug.WriteLine($"[UIA INVOKE] Đã click thành công nút Bắt đầu cuộc trò chuyện.");
+                            ((InvokePattern)invokeP).Invoke();
+                            System.Diagnostics.Debug.WriteLine("[UIA INVOKE] OK");
                             return true;
                         }
                     }
                     catch { }
 
-                    // 2. Thử dùng SelectionItemPattern (Nếu là ListItem)
+                    // Bước 2: SelectionItemPattern
                     try
                     {
-                        if (btnElement.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object pattern))
+                        if (btnElement.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object selP))
                         {
-                            ((SelectionItemPattern)pattern).Select();
-                            System.Diagnostics.Debug.WriteLine($"[UIA SELECT] Đã chọn thành công cuộc trò chuyện.");
+                            ((SelectionItemPattern)selP).Select();
+                            System.Diagnostics.Debug.WriteLine("[UIA SELECT] OK");
                             return true;
                         }
                     }
                     catch { }
 
-                    // 3. Fallback dùng PostMessage click tương đối (Không di chuyển chuột vật lý)
+                    // Bước 3: Chuột thật tại tọa độ thực của element (không hardcode, lấy từ DOM)
                     System.Windows.Rect bounds = btnElement.Current.BoundingRectangle;
                     if (bounds != System.Windows.Rect.Empty)
                     {
-                        int clickX = (int)(bounds.Left + (bounds.Width / 2));
-                        int clickY = (int)(bounds.Top + (bounds.Height / 2));
-
-                        POINT screenPt = new POINT(clickX, clickY);
-                        if (ScreenToClient(hwnd, ref screenPt))
-                        {
-                            IntPtr lParam = (IntPtr)((screenPt.Y << 16) | (screenPt.X & 0xFFFF));
-                            PostMessage(hwnd, WM_LBUTTONDOWN, (IntPtr)1, lParam);
-                            System.Threading.Thread.Sleep(30);
-                            PostMessage(hwnd, WM_LBUTTONUP, IntPtr.Zero, lParam);
-                            System.Threading.Thread.Sleep(50);
-                            PostMessage(hwnd, WM_LBUTTONDOWN, (IntPtr)1, lParam);
-                            System.Threading.Thread.Sleep(30);
-                            PostMessage(hwnd, WM_LBUTTONUP, IntPtr.Zero, lParam);
-                            System.Diagnostics.Debug.WriteLine($"[POST MESSAGE CLICK] Đã click tại client X={screenPt.X}, Y={screenPt.Y}");
-                            return true;
-                        }
-
-                        // 4. Fallback cuối cùng nếu các cách trên đều lỗi mới di chuyển chuột thật
+                        int clickX = (int)(bounds.Left + bounds.Width / 2);
+                        int clickY = (int)(bounds.Top + bounds.Height / 2);
                         SetCursorPos(clickX, clickY);
                         System.Threading.Thread.Sleep(50);
-                        const uint MOUSEEVENTF_LEFTDOWN = 0x02;
-                        const uint MOUSEEVENTF_LEFTUP = 0x04;
                         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                         System.Threading.Thread.Sleep(30);
                         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                        System.Diagnostics.Debug.WriteLine($"[PHYSICAL CLICK FALLBACK] Đã di chuột click tại X={clickX}, Y={clickY}");
+                        System.Diagnostics.Debug.WriteLine($"[REAL MOUSE CLICK] tại screen X={clickX}, Y={clickY}");
                         return true;
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Lỗi tìm DOM: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("Lỗi AutomationClickStartChatButton: " + ex.Message);
             }
             return false;
         }
