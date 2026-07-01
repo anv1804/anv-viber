@@ -972,6 +972,20 @@ namespace ViberManager
                 
                 // Reset cờ click lần đầu cho Viber mới nhúng
                 _hasAutoResetOnFirstClick = false;
+
+                // Tự động focus bàn phím mặc định ngay khi nhúng xong
+                Task.Run(async () =>
+                {
+                    await Task.Delay(200);
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (_currentHost != null && !_currentHost.IsDetached)
+                        {
+                            _currentHost.FocusViber();
+                            TxtStatus.Text = $"Đã nhúng Viber và tự động focus bàn phím.";
+                        }
+                    });
+                });
             }
             catch (Exception ex)
             {
