@@ -637,5 +637,41 @@ namespace ViberManager
             DelayedAlign(150);
             DelayedAlign(500);
         }
+
+        public static void ForceRealignment(IntPtr childHwnd)
+        {
+            if (childHwnd == IntPtr.Zero) return;
+            _isInternalResizing = true;
+            try
+            {
+                IntPtr parentHwnd = GetParent(childHwnd);
+                if (parentHwnd != IntPtr.Zero)
+                {
+                    RECT rect;
+                    if (GetClientRect(parentHwnd, out rect))
+                    {
+                        int w = rect.right - rect.left;
+                        int h = rect.bottom - rect.top;
+                        
+                        const uint SWP_NOZORDER = 0x0004;
+                        const uint SWP_SHOWWINDOW = 0x0040;
+                        const uint SWP_FRAMECHANGED = 0x0020;
+                        
+                        // Cập nhật lại các biến tĩnh để CustomChildSubclassProc khớp giá trị
+                        _currentPhysicalX = 0;
+                        _currentPhysicalY = 0;
+                        _currentPhysicalW = w;
+                        _currentPhysicalH = h;
+                        
+                        Win32Helper.SetWindowPos(childHwnd, IntPtr.Zero, 0, 0, w, h, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                    }
+                }
+            }
+            catch { }
+            finally
+            {
+                _isInternalResizing = false;
+            }
+        }
     }
 }

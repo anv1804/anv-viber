@@ -99,6 +99,9 @@ namespace ViberManager.Services
                     ViberAutomationService.ClickRelative(hwnd, 150, 195);
                 }
                 
+                // Đảm bảo ép Viber khớp khung chứa ngay sau khi click bắt đầu chat
+                ViberHost.ForceRealignment(hwnd);
+
                 // 5. Đợi 2.5 giây để đảm bảo Viber tải và render hoàn chỉnh trang chat mới
                 await Task.Delay(2500);
 
@@ -180,6 +183,7 @@ namespace ViberManager.Services
                 // ----------------------------------------------------
                 // LỚP 2: QUÉT MÀU TÍM VÀ OCR (DỰ PHÒNG KHI DOM GẶP SỰ CỐ)
                 // ----------------------------------------------------
+                ViberHost.ForceRealignment(hwnd);
                 using (Bitmap? bmp = ViberAutomationService.CaptureWindow(hwnd))
                 {
                     if (bmp != null)
@@ -312,6 +316,7 @@ namespace ViberManager.Services
                 await Task.Delay(150);
                 ViberAutomationService.ClickRelative(hwnd, 150, 195);
             }
+            ViberHost.ForceRealignment(hwnd);
         }
     }
 }
