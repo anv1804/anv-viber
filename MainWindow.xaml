@@ -685,12 +685,11 @@
                                                     </Style>
                                                 </DataGridTextColumn.ElementStyle>
                                             </DataGridTextColumn>
-                                            <DataGridTextColumn Header="Thoi Gian" Binding="{Binding Time}" Width="1.4*">
+                                            <DataGridTextColumn Header="Thoi Gian" Binding="{Binding Time}" Width="125">
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
                                                         <Setter Property="VerticalAlignment"   Value="Center"/>
-                                                        <Setter Property="Margin"              Value="0,0,8,0"/>
                                                         <Setter Property="Foreground"          Value="#666666"/>
                                                         <Setter Property="FontSize"            Value="10"/>
                                                     </Style>
@@ -799,12 +798,11 @@
                                                     </Style>
                                                 </DataGridTextColumn.ElementStyle>
                                             </DataGridTextColumn>
-                                            <DataGridTextColumn Header="Thoi Gian" Binding="{Binding Time}" Width="1.4*">
+                                            <DataGridTextColumn Header="Thoi Gian" Binding="{Binding Time}" Width="125">
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
                                                         <Setter Property="VerticalAlignment"   Value="Center"/>
-                                                        <Setter Property="Margin"              Value="0,0,8,0"/>
                                                         <Setter Property="Foreground"          Value="#666666"/>
                                                         <Setter Property="FontSize"            Value="10"/>
                                                     </Style>
