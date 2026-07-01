@@ -173,9 +173,34 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
+                            <!-- Header row: tabs ben trai, nut hanh dong ben phai -->
                             <Border Grid.Row="0" BorderBrush="#A0A0A0"
                                     BorderThickness="0,0,0,1" Background="Transparent">
-                                <TabPanel IsItemsHost="True" Background="Transparent"/>
+                                <DockPanel LastChildFill="False">
+                                    <!-- Cac nut ben phai: chi hien khi chon tab Lich su -->
+                                    <StackPanel x:Name="PnlHistoryTabButtons"
+                                                DockPanel.Dock="Right" Orientation="Horizontal"
+                                                VerticalAlignment="Center" Margin="0,0,4,3">
+                                        <Button x:Name="BtnRefreshHistory" Content="↻ Cap nhat"
+                                                Style="{StaticResource Btn}"
+                                                Padding="8,0" Height="22" FontSize="11" Margin="0,0,3,0"
+                                                Click="BtnRefreshHistory_Click"
+                                                ToolTip="Cap nhat du lieu lich su moi nhat tu DB"/>
+                                        <Button Content="Xoa DB"
+                                                Style="{StaticResource DangerBtnStyle}"
+                                                Padding="8,0" Height="22" FontSize="11" Margin="0,0,3,0"
+                                                Click="BtnClearHistoryDb_Click"
+                                                ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
+                                        <Button Content="Xuat File"
+                                                Style="{StaticResource Btn}"
+                                                Padding="8,0" Height="22" FontSize="11"
+                                                Click="BtnExportHistoryResults_Click"
+                                                ToolTip="Xuat toan bo lich su quet ra file Text/CSV"/>
+                                    </StackPanel>
+                                    <!-- Tab headers ben trai -->
+                                    <TabPanel IsItemsHost="True" Background="Transparent"
+                                              DockPanel.Dock="Left"/>
+                                </DockPanel>
                             </Border>
                             <ContentPresenter Grid.Row="1" ContentSource="SelectedContent"/>
                         </Grid>
@@ -759,7 +784,7 @@
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <!-- Toolbar: Tim kiem + Bo loc + Hanh dong -->
+                                    <!-- Toolbar: Tim kiem + Bo loc -->
                                     <Grid Grid.Row="0" Margin="0,0,0,4">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -767,12 +792,6 @@
                                             <ColumnDefinition Width="108"/>
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
                                         <!-- O tim kiem so dien thoai -->
@@ -804,27 +823,6 @@
                                                   ToolTip="Loc theo phien quet">
                                             <ComboBoxItem Content="Tat ca phien" IsSelected="True"/>
                                         </ComboBox>
-
-                                        <!-- Nut cap nhat du lieu moi nhat -->
-                                        <Button Grid.Column="6" x:Name="BtnRefreshHistory" Content="↻ Cap nhat"
-                                                Style="{StaticResource Btn}"
-                                                Padding="8,0" Height="24" FontSize="11"
-                                                Click="BtnRefreshHistory_Click"
-                                                ToolTip="Cap nhat du lieu lich su moi nhat tu DB"/>
-
-                                        <!-- Xoa DB -->
-                                        <Button Grid.Column="8" Content="Xoa DB"
-                                                Style="{StaticResource DangerBtnStyle}"
-                                                Padding="8,0" Height="24" FontSize="11"
-                                                Click="BtnClearHistoryDb_Click"
-                                                ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
-
-                                        <!-- Xuat File -->
-                                        <Button Grid.Column="10" Content="Xuat File"
-                                                Style="{StaticResource Btn}"
-                                                Padding="8,0" Height="24" FontSize="11"
-                                                Click="BtnExportHistoryResults_Click"
-                                                ToolTip="Xuat toan bo lich su quet ra file Text/CSV"/>
                                     </Grid>
                                     <DataGrid Grid.Row="1" x:Name="GridHistoryResults" FontSize="11" RowHeight="24">
                                         <DataGrid.RowStyle>
