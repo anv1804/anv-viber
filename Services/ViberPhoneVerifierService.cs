@@ -87,7 +87,7 @@ namespace ViberManager.Services
                     ViberAutomationService.SendText(hwnd, phone);
                 }
 
-                await Task.Delay(1200); // Chờ Viber hiển thị danh sách kết quả
+                await Task.Delay(400); // Chờ Viber hiển thị danh sách kết quả (tối ưu hóa từ 1200ms)
 
                 // 4. Click vào kết quả tìm kiếm để mở chat
                 bool clickedDom = ViberAutomationService.AutomationClickStartChatButton(hwnd, phone);
@@ -104,14 +104,14 @@ namespace ViberManager.Services
                         int fbY = fbRect.Top  + (int)(fbH * 0.35);
                         ViberAutomationService.ClickSystemRelative(hwnd,
                             (int)(fbW * 0.18), (int)(fbH * 0.35));
-                        await Task.Delay(200);
+                        await Task.Delay(150);
                         ViberAutomationService.ClickSystemRelative(hwnd,
                             (int)(fbW * 0.18), (int)(fbH * 0.35));
                     }
                 }
 
-                // 5. Đợi Viber render trang chat (1.5s với ForceRealignment mỗi 150ms)
-                for (int i = 0; i < 10; i++)
+                // 5. Đợi Viber render trang chat (tối ưu hóa xuống 4 bước * 150ms = 600ms)
+                for (int i = 0; i < 4; i++)
                 {
                     await Task.Delay(150);
                     ViberHost.ForceRealignment(hwnd);
@@ -127,17 +127,17 @@ namespace ViberManager.Services
                     System.Diagnostics.Debug.WriteLine($"[VERIFY SĐT {phone}] Chat chưa mở, thử nhấn Enter...");
                     // Enter thường chọn kết quả đầu tiên trong danh sách tìm kiếm Viber
                     ViberAutomationService.SendVirtualKey(hwnd, 0x0D); // VK_RETURN
-                    await Task.Delay(300);
+                    await Task.Delay(200);
 
                     // Nếu Enter cũng không được, thử click nhiều vị trí khác nhau
                     ViberAutomationService.ClickRelative(hwnd, 170, 180);
-                    await Task.Delay(150);
+                    await Task.Delay(100);
                     ViberAutomationService.ClickRelative(hwnd, 170, 220);
-                    await Task.Delay(150);
+                    await Task.Delay(100);
 
-                    for (int i = 0; i < 5; i++)
+                    for (int i = 0; i < 3; i++)
                     {
-                        await Task.Delay(150);
+                        await Task.Delay(100);
                         ViberHost.ForceRealignment(hwnd);
                     }
 

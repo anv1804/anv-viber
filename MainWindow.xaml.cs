@@ -1683,11 +1683,33 @@ namespace ViberManager
                 return;
             }
 
-            var selectedProfile = CmbVerifyProfile.SelectedItem as ViberProfile;
-            if (selectedProfile == null)
+            List<ViberProfile> activeProfiles = new List<ViberProfile>();
+            bool isParallel = ChkParallelVerify.IsChecked ?? false;
+
+            if (isParallel)
             {
-                MessageBox.Show("Vui lòng chọn một tài khoản Viber làm mẫu test!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                // Quét song song bằng tất cả tài khoản có trạng thái "Đang nhúng"
+                activeProfiles = Profiles.Where(p => p.Status == "Đang nhúng" && p.WindowHandle != IntPtr.Zero).ToList();
+                if (activeProfiles.Count == 0)
+                {
+                    MessageBox.Show("Không tìm thấy tài khoản nào đang nhúng để chạy song song!\nVui lòng nhúng ít nhất một tài khoản Viber.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+            else
+            {
+                var selectedProfile = CmbVerifyProfile.SelectedItem as ViberProfile;
+                if (selectedProfile == null)
+                {
+                    MessageBox.Show("Vui lòng chọn một tài khoản Viber làm mẫu test!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (selectedProfile.WindowHandle == IntPtr.Zero)
+                {
+                    MessageBox.Show("Tài khoản được chọn chưa hoạt động (WindowHandle rỗng)!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                activeProfiles.Add(selectedProfile);
             }
 
             var phones = TxtVerifyPhones.Text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
@@ -1716,79 +1738,102 @@ namespace ViberManager
             VerifyProgress.Maximum = phones.Count;
             _verifyPhonesCts = new System.Threading.CancellationTokenSource();
 
-            TxtStatus.Text = $"Bắt đầu kiểm tra {phones.Count} số điện thoại...";
+            TxtStatus.Text = $"Bắt đầu kiểm tra {phones.Count} số điện thoại bằng {activeProfiles.Count} luồng tài khoản...";
 
-            // Tạo ID phiên quét mới – dạng "yyyyMMdd_HHmmss" để dễ nhìn
+            // Tạo ID phiên quét mới
             _currentSessionId = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             
+            // Đưa toàn bộ danh sách số điện thoại vào hàng đợi an toàn đa luồng
+            var phoneQueue = new System.Collections.Concurrent.ConcurrentQueue<string>(phones);
+            int completedCount = 0;
+            object syncLock = new object();
+
             try
             {
-                PopupViberLoading.IsOpen = true; // Hiển thị lớp phủ loading từ đầu tiến trình
-                int completed = 0;
-                foreach (string phone in phones)
+                PopupViberLoading.IsOpen = true;
+
+                // Khởi động các worker task chạy song song
+                var tasks = activeProfiles.Select(async profile =>
                 {
-                    if (_verifyPhonesCts.Token.IsCancellationRequested) break;
-
-                    // Nếu đang tạm dừng → ch᷑ cho đến khi được mở khóa (hoặc dừng hẳn)
-                    if (_isPaused)
+                    while (phoneQueue.TryDequeue(out string? phone))
                     {
-                        TxtStatus.Text = $"⏸ Tạm dừng tại số: {phone} – Nhấn [▶ Tiếp tục] để chạy tiếp";
-                        await Task.Run(() => _pauseEvent.Wait(_verifyPhonesCts!.Token));
                         if (_verifyPhonesCts.Token.IsCancellationRequested) break;
-                    }
 
-                    TxtVerifyProgressStatus.Text = $"{completed}/{phones.Count}";
-                    TxtStatus.Text = $"Đang kiểm tra số: {phone}...";
-
-                    string resultText = await RunSinglePhoneVerifyAsync(selectedProfile, phone);
-                    string accountName = "";
-                    if (resultText == "LIVE")
-                    {
-                        accountName = ViberAutomationService.GetChatContactName(selectedProfile.WindowHandle);
-                    }
-
-                    var verifyResult = new VerifyResult
-                    {
-                        Phone = phone,
-                        Result = resultText,
-                        Time = DateTime.Now.ToString("HH:mm:ss dd/MM/yy"),
-                        AccountName = accountName
-                    };
-
-                    // Tự động lưu kết quả vào Database SQLite cục bộ (luôn INSERT mới theo phiên)
-                    SaveToHistoryDb(phone, resultText, verifyResult.Time, accountName, _currentSessionId);
-
-                    Dispatcher.Invoke(() =>
-                    {
-                        var existing = _allVerifyResultsMaster.FirstOrDefault(r => r.Phone == phone);
-                        if (existing != null)
+                        // Nếu đang tạm dừng → chờ cho đến khi được mở khóa
+                        if (_isPaused)
                         {
-                            existing.Result = resultText;
-                            existing.Time = verifyResult.Time;
-                            existing.AccountName = accountName;
-                            
-                            // Đẩy lên đầu danh sách master
-                            _allVerifyResultsMaster.Remove(existing);
-                            _allVerifyResultsMaster.Insert(0, existing);
+                            Dispatcher.Invoke(() => TxtStatus.Text = $"⏸ Tạm dừng quét... Nhấn [▶ Tiếp tục]");
+                            try
+                            {
+                                await Task.Run(() => _pauseEvent.Wait(_verifyPhonesCts!.Token));
+                            }
+                            catch (OperationCanceledException) { break; }
+                            if (_verifyPhonesCts.Token.IsCancellationRequested) break;
                         }
-                        else
-                        {
-                            _allVerifyResultsMaster.Insert(0, verifyResult);
-                        }
-                        ApplyFilterCurrentResults();
-                    });
 
-                    completed++;
-                    VerifyProgress.Value = completed;
-                }
+                        // Cập nhật trạng thái cho từng luồng
+                        Dispatcher.Invoke(() =>
+                        {
+                            TxtStatus.Text = $"[{profile.Name}] Đang quét số: {phone}...";
+                        });
+
+                        string resultText = await RunSinglePhoneVerifyAsync(profile, phone);
+                        string accountName = "";
+                        if (resultText == "LIVE")
+                        {
+                            accountName = ViberAutomationService.GetChatContactName(profile.WindowHandle);
+                        }
+
+                        var verifyResult = new VerifyResult
+                        {
+                            Phone = phone,
+                            Result = resultText,
+                            Time = DateTime.Now.ToString("HH:mm:ss dd/MM/yy"),
+                            AccountName = accountName
+                        };
+
+                        // Lưu vào SQLite
+                        SaveToHistoryDb(phone, resultText, verifyResult.Time, accountName, _currentSessionId);
+
+                        // Cập nhật Master List trên UI Thread
+                        Dispatcher.Invoke(() =>
+                        {
+                            var existing = _allVerifyResultsMaster.FirstOrDefault(r => r.Phone == phone);
+                            if (existing != null)
+                            {
+                                existing.Result = resultText;
+                                existing.Time = verifyResult.Time;
+                                existing.AccountName = accountName;
+                                _allVerifyResultsMaster.Remove(existing);
+                                _allVerifyResultsMaster.Insert(0, existing);
+                            }
+                            else
+                            {
+                                _allVerifyResultsMaster.Insert(0, verifyResult);
+                            }
+                            ApplyFilterCurrentResults();
+
+                            // Tiến trình thanh tiến độ
+                            System.Threading.Interlocked.Increment(ref completedCount);
+                            VerifyProgress.Value = completedCount;
+                            TxtVerifyProgressStatus.Text = $"{completedCount}/{phones.Count}";
+                        });
+
+                        // Một khoảng nghỉ siêu ngắn giữa các số điện thoại để Viber nhận luồng mượt mà
+                        await Task.Delay(100);
+                    }
+                }).ToArray();
+
+                // Chờ tất cả các Task worker hoàn thành
+                await Task.WhenAll(tasks);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Lỗi tiến trình check SĐT: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Lỗi tiến trình check SĐT song song: {ex.Message}");
             }
             finally
             {
-                // 2. Thu hồi nhúng Viber trở lại ViberManager sau khi kết thúc (nếu người dùng có lỡ tay gỡ ra ngoài)
+                // Thu hồi nhúng Viber trở lại ViberManager sau khi kết thúc
                 try
                 {
                     if (_currentHost != null && _currentHost.IsDetached)
@@ -1810,10 +1855,11 @@ namespace ViberManager
                 BtnStartVerify.Content = "▶ Bắt đầu kiểm tra";
                 BtnStartVerify.Style = (Style)FindResource("AddBtnStyle");
                 BtnPauseVerify.Visibility = System.Windows.Visibility.Collapsed;
-                int finalCompleted = (int)VerifyProgress.Value;
+                int finalCompleted = completedCount;
                 TxtVerifyProgressStatus.Text = $"Hoàn tất ({finalCompleted}/{phones.Count})";
-                TxtStatus.Text = $"Hoàn tất kiểm tra danh sách {finalCompleted}/{phones.Count} số điện thoại.";
+                TxtStatus.Text = $"Hoàn tất kiểm tra danh sách {finalCompleted}/{phones.Count} số điện thoại bằng đa luồng.";
             }
+
         }
 
         private async Task<string> RunSinglePhoneVerifyAsync(ViberProfile profile, string phone)

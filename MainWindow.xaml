@@ -634,9 +634,14 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Acc test:" FontSize="11"
                                        Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <ComboBox Grid.Column="1" x:Name="CmbVerifyProfile" Height="24" FontSize="11"
-                                      DisplayMemberPath="DisplayName" VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="2" Content="Nap File" Style="{StaticResource Btn}"
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <ComboBox x:Name="CmbVerifyProfile" Width="130" Height="24" FontSize="11"
+                                          DisplayMemberPath="DisplayName" VerticalContentAlignment="Center"/>
+                                <CheckBox x:Name="ChkParallelVerify" Content="Chạy song song (Đa luồng)" FontSize="10"
+                                          IsChecked="True" VerticalAlignment="Center" Margin="8,0,0,0"
+                                          ToolTip="Chạy song song bằng tất cả tài khoản đang nhúng. Nếu bỏ chọn sẽ chỉ dùng tài khoản được chọn ở ComboBox."/>
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="Nạp File" Style="{StaticResource Btn}"
                                     Height="24" FontSize="11" Margin="4,0,0,0" Click="BtnImportVerifyPhones_Click"/>
                             <!-- Ten file da nap (hien sau khi chon file) -->
                             <TextBlock Grid.Column="3" x:Name="TxtImportedFileName"
