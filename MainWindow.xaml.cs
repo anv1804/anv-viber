@@ -1563,7 +1563,25 @@ namespace ViberManager
 
                     Dispatcher.Invoke(() =>
                     {
-                        VerifyResults.Insert(0, verifyResult);
+                        var existing = VerifyResults.FirstOrDefault(r => r.Phone == phone);
+                        if (existing != null)
+                        {
+                            existing.Result = resultText;
+                            existing.Time = verifyResult.Time;
+                            existing.AccountName = accountName;
+                            
+                            // Đẩy lên đầu danh sách kết quả hiện tại
+                            int oldIdx = VerifyResults.IndexOf(existing);
+                            if (oldIdx > 0)
+                            {
+                                VerifyResults.RemoveAt(oldIdx);
+                                VerifyResults.Insert(0, existing);
+                            }
+                        }
+                        else
+                        {
+                            VerifyResults.Insert(0, verifyResult);
+                        }
                         GridVerifyResults.Items.Refresh();
                     });
 
@@ -1769,7 +1787,22 @@ namespace ViberManager
                     connection.Open();
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = "INSERT INTO verifier_history (phone, result, time, account_name) VALUES (@phone, @result, @time, @account_name);";
+                        // Kiểm tra xem số điện thoại đã tồn tại trong lịch sử chưa
+                        command.CommandText = "SELECT COUNT(*) FROM verifier_history WHERE phone = @phone;";
+                        command.Parameters.AddWithValue("@phone", phone);
+                        long count = Convert.ToInt64(command.ExecuteScalar());
+
+                        command.Parameters.Clear();
+                        if (count > 0)
+                        {
+                            // Đã tồn tại -> Cập nhật thông tin mới nhất và thời gian mới nhất
+                            command.CommandText = "UPDATE verifier_history SET result = @result, time = @time, account_name = @account_name WHERE phone = @phone;";
+                        }
+                        else
+                        {
+                            // Chưa tồn tại -> Thêm mới
+                            command.CommandText = "INSERT INTO verifier_history (phone, result, time, account_name) VALUES (@phone, @result, @time, @account_name);";
+                        }
                         command.Parameters.AddWithValue("@phone", phone);
                         command.Parameters.AddWithValue("@result", result);
                         command.Parameters.AddWithValue("@time", time);
