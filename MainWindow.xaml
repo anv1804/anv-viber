@@ -885,6 +885,22 @@
                                        Foreground="#A9A5E0" FontSize="11"
                                        HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
+
+                        <!-- Popup loading đè lên cửa sổ Viber (Airspace Solution) -->
+                        <Popup x:Name="PopupViberLoading" PlacementTarget="{Binding ElementName=ViberContainer}"
+                               Placement="Relative" HorizontalOffset="0" VerticalOffset="0"
+                               Width="{Binding ElementName=ViberContainer, Path=ActualWidth}"
+                               Height="{Binding ElementName=ViberContainer, Path=ActualHeight}"
+                               AllowsTransparency="True" PopupAnimation="Fade" IsOpen="False">
+                            <Grid Background="#D9131130">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <ProgressBar IsIndeterminate="True" Width="180" Height="4" Foreground="#8A77FF" 
+                                                 Background="#228A77FF" BorderThickness="0" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                    <TextBlock Text="Đang quét dữ liệu..." Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Viber đang thao tác tự động, vui lòng đợi..." Foreground="#A9A5E0" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Popup>
                     </Grid>
                 </Grid>
             </Border>

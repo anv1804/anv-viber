@@ -1638,8 +1638,25 @@ namespace ViberManager
             IntPtr hwnd = profile.WindowHandle;
             if (hwnd == IntPtr.Zero) return "Không thể mở Viber";
 
-            // Gọi logic đã được đóng gói trong module Service riêng biệt
-            return await ViberPhoneVerifierService.VerifySinglePhoneAsync(hwnd, phone);
+            // Hiển thị lớp phủ loading đè lên khung chiếu Viber
+            Dispatcher.Invoke(() =>
+            {
+                PopupViberLoading.IsOpen = true;
+            });
+
+            try
+            {
+                // Gọi logic đã được đóng gói trong module Service riêng biệt
+                return await ViberPhoneVerifierService.VerifySinglePhoneAsync(hwnd, phone);
+            }
+            finally
+            {
+                // Ẩn lớp phủ loading sau khi hoàn thành quét
+                Dispatcher.Invoke(() =>
+                {
+                    PopupViberLoading.IsOpen = false;
+                });
+            }
         }
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
