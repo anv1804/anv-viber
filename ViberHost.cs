@@ -12,6 +12,7 @@ namespace ViberManager
         private readonly IntPtr _childHandle;
         private IntPtr _containerHandle = IntPtr.Zero;
         private static IntPtr _purpleBrush = IntPtr.Zero;
+        private static bool _isInternalResizing = false;
         private bool _isLoginScreen = false;
         private readonly string _profilePath = "";
 
@@ -154,17 +155,12 @@ namespace ViberManager
                 if (posPtr != IntPtr.Zero)
                 {
                     WINDOWPOS pos = Marshal.PtrToStructure<WINDOWPOS>(posPtr);
-                    if (_currentPhysicalW > 0 && _currentPhysicalH > 0)
+                    
+                    // Nếu KHÔNG PHẢI do ViberHost chủ động gọi lệnh resize
+                    if (!_isInternalResizing)
                     {
-                        pos.x = _currentPhysicalX;
-                        pos.y = _currentPhysicalY;
-                        pos.cx = _currentPhysicalW;
-                        pos.cy = _currentPhysicalH;
-
-                        // Xóa các cờ NOMOVE và NOSIZE để ép Windows phải áp dụng tọa độ và kích thước chuẩn của container
-                        pos.flags &= ~SWP_NOMOVE;
-                        pos.flags &= ~SWP_NOSIZE;
-                        
+                        // Khóa cứng vị trí và kích thước, không cho phép Viber tự ý thay đổi tọa độ
+                        pos.flags |= SWP_NOMOVE | SWP_NOSIZE;
                         Marshal.StructureToPtr(pos, posPtr, true);
                     }
                 }
@@ -458,26 +454,34 @@ namespace ViberManager
                 _currentPhysicalW = (int)targetW;
                 _currentPhysicalH = (int)targetH;
 
-                // 1. Container buffer phủ kín vùng WPF
-                Win32Helper.SetWindowPos(
-                    _containerHandle,
-                    IntPtr.Zero,
-                    0, 0,
-                    (int)containerW,
-                    (int)containerH,
-                    SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                _isInternalResizing = true;
+                try
+                {
+                    // 1. Container buffer phủ kín vùng WPF
+                    Win32Helper.SetWindowPos(
+                        _containerHandle,
+                        IntPtr.Zero,
+                        0, 0,
+                        (int)containerW,
+                        (int)containerH,
+                        SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
-                // 2. Định vị Viber bên trong container
-                // SWP_FRAMECHANGED đã tự động gửi WM_SIZE cho Viber — KHÔNG gời thêm MoveWindow
-                // hay SendMessage(WM_SIZE) vì Qt sẽ xử lý WM_SIZE nhiều lần và gọi
-                // QWidget::move() với tọa độ màn hình sai, dẫn đến window bị xô vị trí.
-                Win32Helper.SetWindowPos(
-                    _childHandle,
-                    IntPtr.Zero,
-                    x, y,
-                    (int)targetW,
-                    (int)targetH,
-                    SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                    // 2. Định vị Viber bên trong container
+                    // SWP_FRAMECHANGED đã tự động gửi WM_SIZE cho Viber — KHÔNG gời thêm MoveWindow
+                    // hay SendMessage(WM_SIZE) vì Qt sẽ xử lý WM_SIZE nhiều lần và gọi
+                    // QWidget::move() với tọa độ màn hình sai, dẫn đến window bị xô vị trí.
+                    Win32Helper.SetWindowPos(
+                        _childHandle,
+                        IntPtr.Zero,
+                        x, y,
+                        (int)targetW,
+                        (int)targetH,
+                        SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                }
+                finally
+                {
+                    _isInternalResizing = false;
+                }
             }
         }
 
