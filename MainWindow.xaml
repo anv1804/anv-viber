@@ -892,7 +892,7 @@
                                Width="{Binding ElementName=ViberContainer, Path=ActualWidth}"
                                Height="{Binding ElementName=ViberContainer, Path=ActualHeight}"
                                AllowsTransparency="True" PopupAnimation="Fade" IsOpen="False">
-                            <Grid Background="#D9131130">
+                            <Grid Background="#FA110F24">
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                     <ProgressBar IsIndeterminate="True" Width="180" Height="4" Foreground="#8A77FF" 
                                                  Background="#228A77FF" BorderThickness="0" HorizontalAlignment="Center" Margin="0,0,0,16"/>

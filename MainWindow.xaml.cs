@@ -1549,6 +1549,7 @@ namespace ViberManager
             
             try
             {
+                PopupViberLoading.IsOpen = true; // Hiển thị lớp phủ loading từ đầu tiến trình
                 int completed = 0;
                 foreach (string phone in phones)
                 {
@@ -1624,6 +1625,7 @@ namespace ViberManager
                 }
                 await Task.Delay(500);
 
+                PopupViberLoading.IsOpen = false; // Ẩn lớp phủ loading khi kết thúc toàn bộ danh sách
                 _isVerifyingPhones = false;
                 BtnStartVerify.Content = "▶ Bắt đầu kiểm tra";
                 BtnStartVerify.Style = (Style)FindResource("AddBtnStyle");
@@ -1638,25 +1640,8 @@ namespace ViberManager
             IntPtr hwnd = profile.WindowHandle;
             if (hwnd == IntPtr.Zero) return "Không thể mở Viber";
 
-            // Hiển thị lớp phủ loading đè lên khung chiếu Viber
-            Dispatcher.Invoke(() =>
-            {
-                PopupViberLoading.IsOpen = true;
-            });
-
-            try
-            {
-                // Gọi logic đã được đóng gói trong module Service riêng biệt
-                return await ViberPhoneVerifierService.VerifySinglePhoneAsync(hwnd, phone);
-            }
-            finally
-            {
-                // Ẩn lớp phủ loading sau khi hoàn thành quét
-                Dispatcher.Invoke(() =>
-                {
-                    PopupViberLoading.IsOpen = false;
-                });
-            }
+            // Gọi logic đã được đóng gói trong module Service riêng biệt
+            return await ViberPhoneVerifierService.VerifySinglePhoneAsync(hwnd, phone);
         }
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
