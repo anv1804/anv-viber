@@ -158,6 +158,67 @@ namespace ViberManager
              };
 
              RefreshProfiles();
+
+             // Đồng bộ vị trí PopupViberLoading theo cửa sổ chính và tránh đè app khác
+             this.LocationChanged += MainWindow_LocationChanged;
+             this.SizeChanged += MainWindow_SizeChanged;
+             this.Activated += MainWindow_Activated;
+             this.Deactivated += MainWindow_Deactivated;
+             this.StateChanged += MainWindow_StateChanged;
+         }
+
+         private void MainWindow_LocationChanged(object? sender, EventArgs e)
+         {
+             UpdatePopupPosition();
+         }
+
+         private void MainWindow_SizeChanged(object? sender, SizeChangedEventArgs e)
+         {
+             UpdatePopupPosition();
+         }
+
+         private void MainWindow_Activated(object? sender, EventArgs e)
+         {
+             if (_isVerifyingPhones && PopupViberLoading != null)
+             {
+                 PopupViberLoading.IsOpen = true;
+                 UpdatePopupPosition();
+             }
+         }
+
+         private void MainWindow_Deactivated(object? sender, EventArgs e)
+         {
+             if (PopupViberLoading != null)
+             {
+                 PopupViberLoading.IsOpen = false;
+             }
+         }
+
+         private void MainWindow_StateChanged(object? sender, EventArgs e)
+         {
+             if (PopupViberLoading != null)
+             {
+                 if (this.WindowState == WindowState.Minimized)
+                 {
+                     PopupViberLoading.IsOpen = false;
+                 }
+                 else if (this.WindowState != WindowState.Minimized && _isVerifyingPhones)
+                 {
+                     PopupViberLoading.IsOpen = true;
+                     UpdatePopupPosition();
+                 }
+             }
+         }
+
+         private void UpdatePopupPosition()
+         {
+             if (PopupViberLoading != null && PopupViberLoading.IsOpen)
+             {
+                 // Đẩy nhẹ offset để ép Popup tính lại tọa độ chính xác theo PlacementTarget (ViberContainer)
+                 double offset = PopupViberLoading.HorizontalOffset;
+                 PopupViberLoading.HorizontalOffset = offset + 0.01;
+                 PopupViberLoading.HorizontalOffset = offset;
+             }
          }
 
          private void Profile_PropertyChanged(object? sender, PropertyChangedEventArgs e)
