@@ -99,10 +99,13 @@ namespace ViberManager.Services
                     ViberAutomationService.ClickRelative(hwnd, 150, 195);
                 }
                 
-                // 5. Đợi 2.5 giây để đảm bảo Viber tải và render hoàn chỉnh trang chat mới.
-                // Do cửa sổ con đã được khóa cứng vị trí trong SubclassProc, Viber sẽ không bị dịch chuyển đột ngột.
-                await Task.Delay(2500);
-                ViberHost.ForceRealignment(hwnd);
+                // 5. Đợi 1.5 giây để đảm bảo Viber tải và render hoàn chỉnh trang chat mới.
+                // Gọi ForceRealignment liên tục mỗi 150ms để giật khít khung hình ngay lập tức khi Qt đổi layout.
+                for (int i = 0; i < 10; i++)
+                {
+                    await Task.Delay(150);
+                    ViberHost.ForceRealignment(hwnd);
+                }
 
                 // ----------------------------------------------------
                 // LỚP 1: KIỂM TRA DOM ĐỂ TÌM Ô NHẬP TIN NHẮN VÀ NÚT VIBER OUT GIỮA (ĐỘ CHÍNH XÁC 100% THEO LOGIC KHÁCH HÀNG)
@@ -316,9 +319,12 @@ namespace ViberManager.Services
                 ViberAutomationService.ClickRelative(hwnd, 150, 195);
             }
             
-            // Chờ 1.5 giây để Viber mở chat và thực hiện cưỡng chế căn chỉnh một lần duy nhất
-            await Task.Delay(1500);
-            ViberHost.ForceRealignment(hwnd);
+            // Gọi ForceRealignment liên tục mỗi 150ms trong vòng 1.05 giây để đảm bảo mượt mà tuyệt đối khi chuyển trang
+            for (int i = 0; i < 7; i++)
+            {
+                await Task.Delay(150);
+                ViberHost.ForceRealignment(hwnd);
+            }
         }
     }
 }
