@@ -11,6 +11,8 @@ namespace ViberManager.Services
 {
     public class ViberAutomationService
     {
+        public static Action<bool>? ToggleLoadingOverlay;
+
         [DllImport("user32.dll")]
         private static extern bool SetCursorPos(int x, int y);
 
@@ -112,6 +114,10 @@ namespace ViberManager.Services
 
                 if (width <= 0 || height <= 0) return null;
 
+                // Tạm ẩn loading overlay trước khi chụp hình để tránh dính đè màu tối lên screenshot
+                ToggleLoadingOverlay?.Invoke(false);
+                System.Threading.Thread.Sleep(50); // Đợi 50ms cho DWM ẩn hẳn
+
                 // 1. Thử chụp ảnh ngầm bằng PrintWindow (PW_RENDERFULLCONTENT = 2) để không chiếm màn hình
                 Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
                 bool success = false;
@@ -130,6 +136,9 @@ namespace ViberManager.Services
 
                 if (success && IsValidCapture(bmp))
                 {
+                    // Hiện lại loading overlay
+                    ToggleLoadingOverlay?.Invoke(true);
+
                     try
                     {
                         string debugPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_capture.png");
@@ -144,13 +153,16 @@ namespace ViberManager.Services
                 // 2. Fallback cuối cùng nếu chụp ngầm lỗi (chụp đè màn hình)
                 BringWindowToTop(hwnd);
                 SetForegroundWindow(hwnd);
-                System.Threading.Thread.Sleep(150);
+                System.Threading.Thread.Sleep(100);
 
                 Bitmap fallbackBmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
                 using (Graphics gfx = Graphics.FromImage(fallbackBmp))
                 {
                     gfx.CopyFromScreen(left, top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
                 }
+
+                // Hiện lại loading overlay
+                ToggleLoadingOverlay?.Invoke(true);
 
                 try
                 {
@@ -163,6 +175,8 @@ namespace ViberManager.Services
             }
             catch (Exception ex)
             {
+                // Đảm bảo luôn bật lại overlay nếu xảy ra lỗi
+                ToggleLoadingOverlay?.Invoke(true);
                 System.Diagnostics.Debug.WriteLine("Lỗi CaptureWindow: " + ex.Message);
                 return null;
             }

@@ -122,6 +122,19 @@ namespace ViberManager
             // Khởi tạo Database SQLite cục bộ lưu lịch sử verify
             InitHistoryDatabase();
 
+            // Đăng ký callback ẩn/hiện loading overlay phục vụ chụp ảnh màn hình Viber không bị đè màu tối
+            ViberAutomationService.ToggleLoadingOverlay = (visible) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (PopupViberLoading != null && _isVerifyingPhones)
+                    {
+                        PopupViberLoading.IsOpen = visible;
+                        UpdatePopupPosition();
+                    }
+                });
+            };
+
             // Cấu hình chọn Viber profile làm mẫu test (Sử dụng ListCollectionView mới để độc lập bộ lọc với danh sách chính)
             var verifyView = new System.Windows.Data.ListCollectionView(Profiles);
             verifyView.Filter = item =>
