@@ -754,40 +754,50 @@ namespace ViberManager
         private void BtnOpenViber_Click(object sender, RoutedEventArgs e)
         {
             if (GridProfiles.SelectedItem is ViberProfile selected)
+                OpenViberProfile(selected);
+        }
+
+        private void BtnOpenProfileInline_Click(object sender, RoutedEventArgs e)
+        {
+            // Lấy profile từ DataContext của nút bấm trong DataGrid row
+            if (sender is Button btn && btn.DataContext is ViberProfile profile)
+                OpenViberProfile(profile);
+        }
+
+        private void OpenViberProfile(ViberProfile selected)
+        {
+            if (selected.Status != "Đang đóng") return;
+
+            var confirm = MessageBox.Show($"Bạn có muốn khởi chạy ứng dụng Viber cho tài khoản '{selected.Name}' không?", "Xác nhận mở", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            if (_viberService == null)
             {
-                if (selected.Status != "Đang đóng") return;
+                MessageBox.Show("Cấu hình đường dẫn Viber.exe chưa chính xác!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
 
-                var confirm = MessageBox.Show($"Bạn có muốn khởi chạy ứng dụng Viber cho tài khoản '{selected.Name}' không?", "Xác nhận mở", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (confirm != MessageBoxResult.Yes) return;
+            try
+            {
+                TxtStatus.Text = $"Đã khởi tạo tiến trình cho {selected.Name}...";
+                selected.Status = "Đang mở";
+                selected.LastUpdated = DateTime.Now;
+                RefreshProfiles();
+                _profileRepo.SaveConfig(_config);
 
-                if (_viberService == null)
+                Process? process = _viberService.StartIsolatedViber(selected.Name, selected.DataDirPath);
+                if (process != null)
                 {
-                    MessageBox.Show("Cấu hình đường dẫn Viber.exe chưa chính xác!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    selected.ProcessId = process.Id;
+                    _currentActiveProfile = selected;
+                    _windowScannerTimer.Start();
                 }
-
-                try
-                {
-                    TxtStatus.Text = $"Đã khởi tạo tiến trình cho {selected.Name}...";
-                    selected.Status = "Đang mở";
-                    selected.LastUpdated = DateTime.Now;  // cập nhật timestamp
-                    RefreshProfiles();
-                    _profileRepo.SaveConfig(_config);   // lưu LastUpdated vào file
-
-                    Process? process = _viberService.StartIsolatedViber(selected.Name, selected.DataDirPath);
-                    if (process != null)
-                    {
-                        selected.ProcessId = process.Id;
-                        _currentActiveProfile = selected;
-                        _windowScannerTimer.Start();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    selected.Status = "Đang đóng";
-                    RefreshProfiles();
-                    MessageBox.Show($"Lỗi khởi động Viber: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            }
+            catch (Exception ex)
+            {
+                selected.Status = "Đang đóng";
+                RefreshProfiles();
+                MessageBox.Show($"Lỗi khởi động Viber: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1591,6 +1601,9 @@ namespace ViberManager
                                     .ToList();
 
                     TxtVerifyPhones.Text = string.Join(Environment.NewLine, lines);
+                    // Hiển thị tên file đã nạp
+                    TxtImportedFileName.Text = System.IO.Path.GetFileName(openFileDialog.FileName);
+                    TxtImportedFileName.ToolTip = openFileDialog.FileName;
                     TxtStatus.Text = $"Đã nạp {lines.Count} số điện thoại từ file.";
                 }
                 catch (Exception ex)

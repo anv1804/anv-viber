@@ -533,6 +533,27 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
+                                    <!-- Nut Mo Viber cho tung profile -->
+                                    <DataGridTemplateColumn Header="Mo" Width="54" CanUserResize="False" CanUserSort="False">
+                                        <DataGridTemplateColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTemplateColumn.HeaderStyle>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="Mo" Height="20" Padding="8,0" FontSize="10"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                        Click="BtnOpenProfileInline_Click">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource SuccessBtnStyle}">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
 
@@ -605,6 +626,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="78"/>
+                                <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="128"/>
                                 <ColumnDefinition Width="5"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -615,12 +637,18 @@
                                       DisplayMemberPath="DisplayName" VerticalContentAlignment="Center"/>
                             <Button Grid.Column="2" Content="Nap File" Style="{StaticResource Btn}"
                                     Height="24" FontSize="11" Margin="4,0,0,0" Click="BtnImportVerifyPhones_Click"/>
-                            <Button Grid.Column="3" x:Name="BtnStartVerify" Content="Bat dau kiem tra"
+                            <!-- Ten file da nap (hien sau khi chon file) -->
+                            <TextBlock Grid.Column="3" x:Name="TxtImportedFileName"
+                                       Text="" FontSize="10" Foreground="{StaticResource TextMuted}"
+                                       VerticalAlignment="Center" Margin="5,0,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                            <Button Grid.Column="4" x:Name="BtnStartVerify" Content="Bat dau kiem tra"
                                     Style="{StaticResource AddBtnStyle}"
                                     Height="24" FontSize="11" FontWeight="SemiBold"
                                     Margin="4,0,0,0" Click="BtnStartVerify_Click"/>
-                            <!-- Nút Tạm dừng / Tiếp tục – chỉ hiện khi đang quét -->
-                            <Button Grid.Column="5" x:Name="BtnPauseVerify" Content="⏸ Tam dung"
+                            <!-- Nut Tam dung / Tiep tuc - chi hien khi dang quet -->
+                            <Button Grid.Column="6" x:Name="BtnPauseVerify" Content="⏸ Tam dung"
                                     Style="{StaticResource Btn}"
                                     Height="24" FontSize="11" FontWeight="SemiBold"
                                     Visibility="Collapsed"
@@ -629,9 +657,9 @@
 
                         <!-- Phone input -->
                         <TextBox Grid.Row="2" x:Name="TxtVerifyPhones"
-                                 Height="42" FontSize="11"
+                                 Height="55" FontSize="11"
                                  AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
-                                 TextWrapping="Wrap" Margin="8,0,8,5" Padding="4"
+                                 TextWrapping="Wrap" Margin="8,0,8,5" Padding="3,2"
                                  ToolTip="Nhap danh sach SDT, moi so mot dong"/>
 
                         <!-- Result tabs -->
