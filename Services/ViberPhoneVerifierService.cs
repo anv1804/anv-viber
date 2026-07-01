@@ -105,6 +105,9 @@ namespace ViberManager.Services
                 // 5. Đợi 2.5 giây để đảm bảo Viber tải và render hoàn chỉnh trang chat mới
                 await Task.Delay(2500);
 
+                // Cưỡng chế căn chỉnh Viber khớp khung chứa sau khi trang chat đã load xong hoàn chỉnh
+                ViberHost.ForceRealignment(hwnd);
+
                 // ----------------------------------------------------
                 // LỚP 1: KIỂM TRA DOM ĐỂ TÌM Ô NHẬP TIN NHẮN VÀ NÚT VIBER OUT GIỮA (ĐỘ CHÍNH XÁC 100% THEO LOGIC KHÁCH HÀNG)
                 // ----------------------------------------------------
