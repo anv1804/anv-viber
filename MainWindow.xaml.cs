@@ -88,6 +88,8 @@ namespace ViberManager
         // Quản lý luồng kiểm tra SĐT hàng loạt
         private bool _isVerifyingPhones = false;
         private System.Threading.CancellationTokenSource? _verifyPhonesCts;
+        // ID phiên quét hiện tại – tạo mới mỗi khi người dùng bấm "Bắt đầu kiểm tra"
+        private string _currentSessionId = string.Empty;
 
         public MainWindow()
         {
@@ -1635,6 +1637,9 @@ namespace ViberManager
             _verifyPhonesCts = new System.Threading.CancellationTokenSource();
 
             TxtStatus.Text = $"Bắt đầu kiểm tra {phones.Count} số điện thoại...";
+
+            // Tạo ID phiên quét mới – dạng "yyyyMMdd_HHmmss" để dễ nhìn
+            _currentSessionId = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             
             try
             {
@@ -1662,8 +1667,8 @@ namespace ViberManager
                         AccountName = accountName
                     };
 
-                    // Tự động lưu kết quả vào Database SQLite cục bộ
-                    SaveToHistoryDb(phone, resultText, verifyResult.Time, accountName);
+                    // Tự động lưu kết quả vào Database SQLite cục bộ (luôn INSERT mới theo phiên)
+                    SaveToHistoryDb(phone, resultText, verifyResult.Time, accountName, _currentSessionId);
 
                     Dispatcher.Invoke(() =>
                     {
@@ -1842,28 +1847,33 @@ namespace ViberManager
                                 phone TEXT NOT NULL,
                                 result TEXT NOT NULL,
                                 time TEXT NOT NULL,
-                                account_name TEXT
+                                account_name TEXT,
+                                session_id TEXT
                             );";
                         command.ExecuteNonQuery();
 
-                        // Thực hiện migration thêm cột account_name nếu bảng đã tồn tại từ trước mà chưa có cột này
+                        // Migration: thêm cột account_name nếu chưa có
                         command.CommandText = "PRAGMA table_info(verifier_history);";
                         bool hasAccountName = false;
+                        bool hasSessionId = false;
                         using (var reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                if (reader.GetString(1) == "account_name")
-                                {
-                                    hasAccountName = true;
-                                    break;
-                                }
+                                string colName = reader.GetString(1);
+                                if (colName == "account_name") hasAccountName = true;
+                                if (colName == "session_id") hasSessionId = true;
                             }
                         }
 
                         if (!hasAccountName)
                         {
                             command.CommandText = "ALTER TABLE verifier_history ADD COLUMN account_name TEXT;";
+                            command.ExecuteNonQuery();
+                        }
+                        if (!hasSessionId)
+                        {
+                            command.CommandText = "ALTER TABLE verifier_history ADD COLUMN session_id TEXT;";
                             command.ExecuteNonQuery();
                         }
                     }
@@ -1876,9 +1886,9 @@ namespace ViberManager
         }
 
         /// <summary>
-        /// Lưu bản ghi verify xuống SQLite
+        /// Lưu bản ghi verify xuống SQLite – luôn INSERT mới, mỗi phiên quét giữ nguyên lịch sử riêng
         /// </summary>
-        private void SaveToHistoryDb(string phone, string result, string time, string accountName)
+        private void SaveToHistoryDb(string phone, string result, string time, string accountName, string sessionId)
         {
             try
             {
@@ -1888,26 +1898,13 @@ namespace ViberManager
                     connection.Open();
                     using (var command = connection.CreateCommand())
                     {
-                        // Kiểm tra xem số điện thoại đã tồn tại trong lịch sử chưa
-                        command.CommandText = "SELECT COUNT(*) FROM verifier_history WHERE phone = @phone;";
-                        command.Parameters.AddWithValue("@phone", phone);
-                        long count = Convert.ToInt64(command.ExecuteScalar());
-
-                        command.Parameters.Clear();
-                        if (count > 0)
-                        {
-                            // Đã tồn tại -> Cập nhật thông tin mới nhất và thời gian mới nhất
-                            command.CommandText = "UPDATE verifier_history SET result = @result, time = @time, account_name = @account_name WHERE phone = @phone;";
-                        }
-                        else
-                        {
-                            // Chưa tồn tại -> Thêm mới
-                            command.CommandText = "INSERT INTO verifier_history (phone, result, time, account_name) VALUES (@phone, @result, @time, @account_name);";
-                        }
+                        // Luôn INSERT bản ghi mới – mỗi phiên quét là một tập dữ liệu riêng biệt
+                        command.CommandText = "INSERT INTO verifier_history (phone, result, time, account_name, session_id) VALUES (@phone, @result, @time, @account_name, @session_id);";
                         command.Parameters.AddWithValue("@phone", phone);
                         command.Parameters.AddWithValue("@result", result);
                         command.Parameters.AddWithValue("@time", time);
                         command.Parameters.AddWithValue("@account_name", accountName);
+                        command.Parameters.AddWithValue("@session_id", sessionId);
                         command.ExecuteNonQuery();
                     }
                 }
@@ -1930,6 +1927,13 @@ namespace ViberManager
                 string searchText = TxtSearchHistoryResult?.Text?.Trim() ?? "";
                 int filterStatusIdx = CmbFilterHistoryStatus?.SelectedIndex ?? 0; // 0: Tất cả, 1: LIVE, 2: Not LIVE
 
+                // Lọc theo phiên: lấy session_id được chọn trong CmbFilterSession (null = tất cả)
+                string selectedSession = "";
+                if (CmbFilterSession?.SelectedIndex > 0 && CmbFilterSession.SelectedItem is string sessionTag)
+                {
+                    selectedSession = sessionTag;
+                }
+
                 string connectionString = $"Data Source={_historyDbPath};";
                 using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
                 {
@@ -1950,11 +1954,19 @@ namespace ViberManager
                         {
                             countQuery.Append(" AND result = 'Not LIVE'");
                         }
+                        if (!string.IsNullOrEmpty(selectedSession))
+                        {
+                            countQuery.Append(" AND session_id = @session");
+                        }
 
                         command.CommandText = countQuery.ToString();
                         if (!string.IsNullOrEmpty(searchText))
                         {
                             command.Parameters.AddWithValue("@search", $"%{searchText}%");
+                        }
+                        if (!string.IsNullOrEmpty(selectedSession))
+                        {
+                            command.Parameters.AddWithValue("@session", selectedSession);
                         }
                         _historyTotalItems = Convert.ToInt32(command.ExecuteScalar());
 
@@ -1979,6 +1991,11 @@ namespace ViberManager
                         else if (filterStatusIdx == 2)
                         {
                             query.Append(" AND result = 'Not LIVE'");
+                        }
+                        if (!string.IsNullOrEmpty(selectedSession))
+                        {
+                            query.Append(" AND session_id = @session");
+                            command.Parameters.AddWithValue("@session", selectedSession);
                         }
 
                         query.Append(" ORDER BY id DESC LIMIT @limit OFFSET @offset;");
@@ -2018,6 +2035,70 @@ namespace ViberManager
                 System.Diagnostics.Debug.WriteLine($"Lỗi Load SQLite History: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Load danh sách phiên quét từ DB để populate vào CmbFilterSession
+        /// </summary>
+        private void RefreshSessionList()
+        {
+            try
+            {
+                string connectionString = $"Data Source={_historyDbPath};";
+                using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "SELECT DISTINCT session_id FROM verifier_history WHERE session_id IS NOT NULL AND session_id != '' ORDER BY session_id DESC LIMIT 50;";
+                        var sessions = new List<string>();
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                sessions.Add(reader.GetString(0));
+                            }
+                        }
+
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (CmbFilterSession == null) return;
+                            int prevIdx = CmbFilterSession.SelectedIndex;
+                            string? prevVal = prevIdx > 0 ? CmbFilterSession.SelectedItem as string : null;
+
+                            CmbFilterSession.Items.Clear();
+                            CmbFilterSession.Items.Add("Tat ca phien");
+                            foreach (var s in sessions)
+                            {
+                                // Hiển thị dạng đẹp: "20260701_103500" → "01/07/26 10:35:00"
+                                string label = s;
+                                if (s.Length == 15 && s[8] == '_')
+                                {
+                                    try
+                                    {
+                                        var dt = DateTime.ParseExact(s, "yyyyMMdd_HHmmss", null);
+                                        label = dt.ToString("dd/MM/yy HH:mm:ss");
+                                    }
+                                    catch { }
+                                }
+                                CmbFilterSession.Items.Add(s); // tag = raw session_id
+                                // Thay item string bằng object ẩn tag để GetString dễ hơn
+                            }
+
+                            // Giữ lại lựa chọn cũ nếu vẫn còn tồn tại
+                            if (prevVal != null && CmbFilterSession.Items.Contains(prevVal))
+                                CmbFilterSession.SelectedItem = prevVal;
+                            else
+                                CmbFilterSession.SelectedIndex = 0;
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Lỗi RefreshSessionList: {ex.Message}");
+            }
+        }
+
 
         // ==========================================
         // SỰ KIỆN TAB 1: KẾT QUẢ HIỆN TẠI
@@ -2122,6 +2203,7 @@ namespace ViberManager
 
         private void TabHistory_Selected(object sender, RoutedEventArgs e)
         {
+            RefreshSessionList();
             LoadHistoryResults();
         }
 
@@ -2132,6 +2214,13 @@ namespace ViberManager
         }
 
         private void CmbFilterHistoryStatus_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isInitialized) return;
+            _historyCurrentPage = 1;
+            LoadHistoryResults();
+        }
+
+        private void CmbFilterSession_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!_isInitialized) return;
             _historyCurrentPage = 1;

@@ -757,6 +757,8 @@
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="110"/>
                                             <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="Auto"/>
@@ -778,15 +780,21 @@
                                             <ComboBoxItem Content="LIVE"/>
                                             <ComboBoxItem Content="Not LIVE"/>
                                         </ComboBox>
-                                        <Button Grid.Column="4" Content="Xoa DB" Style="{StaticResource DangerBtnStyle}"
+                                        <!-- ComboBox lọc theo phiên quét – được populate động từ DB -->
+                                        <ComboBox Grid.Column="4" x:Name="CmbFilterSession" Height="24" FontSize="11"
+                                                  VerticalContentAlignment="Center" SelectionChanged="CmbFilterSession_SelectionChanged"
+                                                  ToolTip="Loc theo phien quet">
+                                            <ComboBoxItem Content="Tat ca phien" IsSelected="True"/>
+                                        </ComboBox>
+                                        <Button Grid.Column="6" Content="Xoa DB" Style="{StaticResource DangerBtnStyle}"
                                                 Padding="8,0" Height="24" FontSize="11"
                                                 Click="BtnClearHistoryDb_Click"
                                                 ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
-                                        <Button Grid.Column="6" Content="Upload DB" Style="{StaticResource AddBtnStyle}"
+                                        <Button Grid.Column="8" Content="Upload DB" Style="{StaticResource AddBtnStyle}"
                                                 Padding="8,0" Height="24" FontSize="11"
                                                 Click="BtnUploadHistoryDb_Click"
                                                 ToolTip="Upload/Import file ket qua quet vao SQLite DB"/>
-                                        <Button Grid.Column="8" Content="Xuat File" Style="{StaticResource Btn}"
+                                        <Button Grid.Column="10" Content="Xuat File" Style="{StaticResource Btn}"
                                                 Padding="8,0" Height="24" FontSize="11"
                                                 Click="BtnExportHistoryResults_Click"
                                                 ToolTip="Xuat toan bo lich su quet ra file Text/CSV"/>
