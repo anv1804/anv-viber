@@ -35,6 +35,12 @@ namespace ViberManager
         private int _historyTotalItems = 0;
         private int _historyTotalPages = 1;
 
+        private List<VerifyResult> _allVerifyResultsMaster = new List<VerifyResult>();
+        private int _currentPageTab1 = 1;
+        private const int PageSizeTab1 = 100;
+        private int _totalItemsTab1 = 0;
+        private int _totalPagesTab1 = 1;
+
         public string ViberPath { get; set; } = string.Empty;
 
         private bool _isAllSelected = false;
@@ -1543,6 +1549,10 @@ namespace ViberManager
                 return;
             }
 
+            _allVerifyResultsMaster.Clear();
+            VerifyResults.Clear();
+            _currentPageTab1 = 1;
+
             _isVerifyingPhones = true;
             BtnStartVerify.Content = "⏹ Dừng kiểm tra";
             BtnStartVerify.Style = (Style)FindResource("DangerBtnStyle");
@@ -1583,26 +1593,22 @@ namespace ViberManager
 
                     Dispatcher.Invoke(() =>
                     {
-                        var existing = VerifyResults.FirstOrDefault(r => r.Phone == phone);
+                        var existing = _allVerifyResultsMaster.FirstOrDefault(r => r.Phone == phone);
                         if (existing != null)
                         {
                             existing.Result = resultText;
                             existing.Time = verifyResult.Time;
                             existing.AccountName = accountName;
                             
-                            // Đẩy lên đầu danh sách kết quả hiện tại
-                            int oldIdx = VerifyResults.IndexOf(existing);
-                            if (oldIdx > 0)
-                            {
-                                VerifyResults.RemoveAt(oldIdx);
-                                VerifyResults.Insert(0, existing);
-                            }
+                            // Đẩy lên đầu danh sách master
+                            _allVerifyResultsMaster.Remove(existing);
+                            _allVerifyResultsMaster.Insert(0, existing);
                         }
                         else
                         {
-                            VerifyResults.Insert(0, verifyResult);
+                            _allVerifyResultsMaster.Insert(0, verifyResult);
                         }
-                        GridVerifyResults.Items.Refresh();
+                        ApplyFilterCurrentResults();
                     });
 
                     completed++;
@@ -1945,11 +1951,14 @@ namespace ViberManager
         
         private void TxtSearchCurrentResult_TextChanged(object sender, TextChangedEventArgs e)
         {
+            _currentPageTab1 = 1;
             ApplyFilterCurrentResults();
         }
 
         private void CmbFilterCurrentStatus_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized) return;
+            _currentPageTab1 = 1;
             ApplyFilterCurrentResults();
         }
 
@@ -1960,38 +1969,77 @@ namespace ViberManager
             string searchText = TxtSearchCurrentResult?.Text?.Trim() ?? "";
             int filterStatusIdx = CmbFilterCurrentStatus?.SelectedIndex ?? 0;
 
-            ICollectionView view = CollectionViewSource.GetDefaultView(VerifyResults);
-            view.Filter = (obj) =>
+            // Lọc danh sách từ master list
+            var filtered = _allVerifyResultsMaster.Where(item =>
             {
-                if (obj is VerifyResult item)
+                // Lọc theo SĐT
+                if (!string.IsNullOrEmpty(searchText) && !item.Phone.Contains(searchText))
                 {
-                    // Lọc theo SĐT
-                    if (!string.IsNullOrEmpty(searchText) && !item.Phone.Contains(searchText))
-                    {
-                        return false;
-                    }
-
-                    // Lọc theo kết quả
-                    if (filterStatusIdx == 1 && item.Result != "LIVE")
-                    {
-                        return false;
-                    }
-                    if (filterStatusIdx == 2 && item.Result != "Not LIVE")
-                    {
-                        return false;
-                    }
-
-                    return true;
+                    return false;
                 }
-                return false;
-            };
+
+                // Lọc theo kết quả
+                if (filterStatusIdx == 1 && item.Result != "LIVE")
+                {
+                    return false;
+                }
+                if (filterStatusIdx == 2 && item.Result != "Not LIVE")
+                {
+                    return false;
+                }
+
+                return true;
+            }).ToList();
+
+            _totalItemsTab1 = filtered.Count;
+            _totalPagesTab1 = (int)Math.Ceiling((double)_totalItemsTab1 / PageSizeTab1);
+            if (_totalPagesTab1 < 1) _totalPagesTab1 = 1;
+            if (_currentPageTab1 > _totalPagesTab1) _currentPageTab1 = _totalPagesTab1;
+            if (_currentPageTab1 < 1) _currentPageTab1 = 1;
+
+            // Lấy trang hiện tại
+            var pageItems = filtered.Skip((_currentPageTab1 - 1) * PageSizeTab1).Take(PageSizeTab1).ToList();
+
+            // Cập nhật ObservableCollection VerifyResults
+            VerifyResults.Clear();
+            foreach (var item in pageItems)
+            {
+                VerifyResults.Add(item);
+            }
+
             GridVerifyResults.Items.Refresh();
+
+            // Cập nhật thông tin phân trang trên giao diện Tab 1
+            if (TxtTab1Total != null) TxtTab1Total.Text = $"Tổng số: {_totalItemsTab1:N0} số";
+            if (TxtTab1PageInfo != null) TxtTab1PageInfo.Text = $"Trang {_currentPageTab1} / {_totalPagesTab1}";
+            if (BtnTab1PrevPage != null) BtnTab1PrevPage.IsEnabled = _currentPageTab1 > 1;
+            if (BtnTab1NextPage != null) BtnTab1NextPage.IsEnabled = _currentPageTab1 < _totalPagesTab1;
+        }
+
+        private void BtnTab1PrevPage_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentPageTab1 > 1)
+            {
+                _currentPageTab1--;
+                ApplyFilterCurrentResults();
+            }
+        }
+
+        private void BtnTab1NextPage_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentPageTab1 < _totalPagesTab1)
+            {
+                _currentPageTab1++;
+                ApplyFilterCurrentResults();
+            }
         }
 
         private void BtnClearCurrentResults_Click(object sender, RoutedEventArgs e)
         {
+            _allVerifyResultsMaster.Clear();
             VerifyResults.Clear();
-            GridVerifyResults?.Items.Refresh();
+            _currentPageTab1 = 1;
+            ApplyFilterCurrentResults();
         }
 
         // ==========================================
@@ -2084,6 +2132,216 @@ namespace ViberManager
                 await ViberPhoneVerifierService.OpenChatWithPhoneAsync(activeProfile.WindowHandle, result.Phone);
                 
                 TxtStatus.Text = $"Đã yêu cầu mở cuộc trò chuyện với số {result.Phone}.";
+            }
+        }
+
+        private void BtnExportCurrentResults_Click(object sender, RoutedEventArgs e)
+        {
+            if (_allVerifyResultsMaster.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Không có dữ liệu kết quả hiện tại để xuất file!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv",
+                FileName = "KetQuaQuet_HienTai.txt",
+                Title = "Lưu danh sách kết quả hiện tại"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var lines = new List<string>();
+                    bool isCsv = saveFileDialog.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
+                    
+                    if (isCsv)
+                    {
+                        lines.Add("So Dien Thoai,Ket Qua,Ten Viber,Thoi Gian");
+                    }
+
+                    foreach (var res in _allVerifyResultsMaster)
+                    {
+                        if (isCsv)
+                        {
+                            lines.Add($"\"{res.Phone}\",\"{res.Result}\",\"{res.AccountName}\",\"{res.Time}\"");
+                        }
+                        else
+                        {
+                            lines.Add($"{res.Phone}|{res.Result}|{res.Time}|{res.AccountName}");
+                        }
+                    }
+
+                    File.WriteAllLines(saveFileDialog.FileName, lines, Encoding.UTF8);
+                    System.Windows.MessageBox.Show($"Đã xuất thành công {_allVerifyResultsMaster.Count} kết quả ra file!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Lỗi khi xuất file: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void BtnUploadHistoryDb_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                Title = "Chọn file chứa kết quả quét để tải lên DB"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var lines = File.ReadAllLines(openFileDialog.FileName)
+                                    .Select(l => l.Trim())
+                                    .Where(l => !string.IsNullOrEmpty(l))
+                                    .ToList();
+
+                    int imported = 0;
+                    string connectionString = $"Data Source={_historyDbPath};";
+                    using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var transaction = connection.BeginTransaction())
+                        {
+                            using (var command = connection.CreateCommand())
+                            {
+                                command.Transaction = transaction;
+
+                                foreach (string line in lines)
+                                {
+                                    string[] parts = line.Split(new[] { '|', ',' }, StringSplitOptions.None)
+                                                         .Select(p => p.Trim())
+                                                         .ToArray();
+
+                                    if (parts.Length == 0 || string.IsNullOrEmpty(parts[0])) continue;
+
+                                    string phone = parts[0];
+                                    string result = parts.Length > 1 && !string.IsNullOrEmpty(parts[1]) ? parts[1] : "LIVE";
+                                    string time = parts.Length > 2 && !string.IsNullOrEmpty(parts[2]) ? parts[2] : DateTime.Now.ToString("HH:mm:ss dd/MM/yy");
+                                    string accountName = parts.Length > 3 ? parts[3] : "";
+
+                                    command.CommandText = "SELECT COUNT(*) FROM verifier_history WHERE phone = @phone;";
+                                    command.Parameters.Clear();
+                                    command.Parameters.AddWithValue("@phone", phone);
+                                    long count = Convert.ToInt64(command.ExecuteScalar());
+
+                                    command.Parameters.Clear();
+                                    if (count > 0)
+                                    {
+                                        command.CommandText = "UPDATE verifier_history SET result = @result, time = @time, account_name = @account_name WHERE phone = @phone;";
+                                    }
+                                    else
+                                    {
+                                        command.CommandText = "INSERT INTO verifier_history (phone, result, time, account_name) VALUES (@phone, @result, @time, @account_name);";
+                                    }
+                                    command.Parameters.AddWithValue("@phone", phone);
+                                    command.Parameters.AddWithValue("@result", result);
+                                    command.Parameters.AddWithValue("@time", time);
+                                    command.Parameters.AddWithValue("@account_name", accountName);
+                                    command.ExecuteNonQuery();
+                                    
+                                    imported++;
+                                }
+                            }
+                            transaction.Commit();
+                        }
+                    }
+
+                    _historyCurrentPage = 1;
+                    LoadHistoryResults();
+                    System.Windows.MessageBox.Show($"Đã tải lên và cập nhật {imported} số điện thoại thành công vào lịch sử!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Lỗi khi tải file lên DB: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void BtnExportHistoryResults_Click(object sender, RoutedEventArgs e)
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv",
+                FileName = "LichSuQuet_Viber.txt",
+                Title = "Lưu danh sách lịch sử quét"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var lines = new List<string>();
+                    bool isCsv = saveFileDialog.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
+                    
+                    if (isCsv)
+                    {
+                        lines.Add("So Dien Thoai,Ket Qua,Ten Viber,Thoi Gian");
+                    }
+
+                    string searchText = TxtSearchHistoryResult?.Text?.Trim() ?? "";
+                    int filterStatusIdx = CmbFilterHistoryStatus?.SelectedIndex ?? 0;
+
+                    int exportedCount = 0;
+                    string connectionString = $"Data Source={_historyDbPath};";
+                    using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var command = connection.CreateCommand())
+                        {
+                            StringBuilder query = new StringBuilder("SELECT phone, result, time, account_name FROM verifier_history WHERE 1=1");
+                            if (!string.IsNullOrEmpty(searchText))
+                            {
+                                query.Append(" AND phone LIKE @search");
+                                command.Parameters.AddWithValue("@search", $"%{searchText}%");
+                            }
+                            if (filterStatusIdx == 1)
+                            {
+                                query.Append(" AND result = 'LIVE'");
+                            }
+                            else if (filterStatusIdx == 2)
+                            {
+                                query.Append(" AND result = 'Not LIVE'");
+                            }
+
+                            query.Append(" ORDER BY id DESC;");
+                            command.CommandText = query.ToString();
+
+                            using (var reader = command.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    string phone = reader.GetString(0);
+                                    string result = reader.GetString(1);
+                                    string time = reader.GetString(2);
+                                    string accountName = reader.IsDBNull(3) ? "" : reader.GetString(3);
+
+                                    if (isCsv)
+                                    {
+                                        lines.Add($"\"{phone}\",\"{result}\",\"{accountName}\",\"{time}\"");
+                                    }
+                                    else
+                                    {
+                                        lines.Add($"{phone}|{result}|{time}|{accountName}");
+                                    }
+                                    exportedCount++;
+                                }
+                            }
+                        }
+                    }
+
+                    File.WriteAllLines(saveFileDialog.FileName, lines, Encoding.UTF8);
+                    System.Windows.MessageBox.Show($"Đã xuất thành công {exportedCount} lịch sử quét ra file!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Lỗi khi xuất file: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

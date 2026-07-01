@@ -610,6 +610,7 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <!-- Filter bar -->
                                     <Grid Grid.Row="0" Margin="0,0,0,4">
@@ -617,6 +618,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
@@ -638,6 +641,10 @@
                                         <Button Grid.Column="4" Content="Clear" Style="{StaticResource DangerBtnStyle}"
                                                 Padding="8,0" Height="24" FontSize="11"
                                                 Click="BtnClearCurrentResults_Click"/>
+                                        <Button Grid.Column="6" Content="Xuat File" Style="{StaticResource Btn}"
+                                                Padding="8,0" Height="24" FontSize="11"
+                                                Click="BtnExportCurrentResults_Click"
+                                                ToolTip="Xuat danh sach ket qua hien tai ra file Text/CSV"/>
                                     </Grid>
                                     <!-- Results table -->
                                     <DataGrid Grid.Row="1" x:Name="GridVerifyResults" FontSize="11" RowHeight="24">
@@ -715,6 +722,24 @@
                                             </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
+
+                                    <!-- Thanh phân trang ở dưới cùng Grid.Row="2" -->
+                                    <Grid Grid.Row="2" Margin="0,5,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Tổng số bản ghi -->
+                                        <TextBlock Grid.Column="0" x:Name="TxtTab1Total" Text="Tổng số: 0 số" FontSize="11" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+                                        
+                                        <!-- Các nút tiến/lùi trang -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button x:Name="BtnTab1PrevPage" Content="◀ Trang trước" Click="BtnTab1PrevPage_Click" Height="22" Padding="8,0" FontSize="11" Margin="0,0,4,0"/>
+                                            <TextBlock x:Name="TxtTab1PageInfo" Text="Trang 1 / 1" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" Margin="4,0,8,0"/>
+                                            <Button x:Name="BtnTab1NextPage" Content="Trang sau ▶" Click="BtnTab1NextPage_Click" Height="22" Padding="8,0" FontSize="11"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Grid>
                             </TabItem>
 
@@ -731,6 +756,10 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="5"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="5"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
@@ -753,6 +782,14 @@
                                                 Padding="8,0" Height="24" FontSize="11"
                                                 Click="BtnClearHistoryDb_Click"
                                                 ToolTip="Xoa vinh vien toan bo lich su quet trong SQLite"/>
+                                        <Button Grid.Column="6" Content="Upload DB" Style="{StaticResource AddBtnStyle}"
+                                                Padding="8,0" Height="24" FontSize="11"
+                                                Click="BtnUploadHistoryDb_Click"
+                                                ToolTip="Upload/Import file ket qua quet vao SQLite DB"/>
+                                        <Button Grid.Column="8" Content="Xuat File" Style="{StaticResource Btn}"
+                                                Padding="8,0" Height="24" FontSize="11"
+                                                Click="BtnExportHistoryResults_Click"
+                                                ToolTip="Xuat toan bo lich su quet ra file Text/CSV"/>
                                     </Grid>
                                     <DataGrid Grid.Row="1" x:Name="GridHistoryResults" FontSize="11" RowHeight="24">
                                         <DataGrid.RowStyle>
