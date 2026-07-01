@@ -87,6 +87,8 @@ namespace ViberManager
 
         // Quản lý luồng kiểm tra SĐT hàng loạt
         private bool _isVerifyingPhones = false;
+        private bool _isPaused = false;
+        private System.Threading.ManualResetEventSlim _pauseEvent = new System.Threading.ManualResetEventSlim(true);
         private System.Threading.CancellationTokenSource? _verifyPhonesCts;
         // ID phiên quét hiện tại – tạo mới mỗi khi người dùng bấm "Bắt đầu kiểm tra"
         private string _currentSessionId = string.Empty;
@@ -1598,12 +1600,73 @@ namespace ViberManager
             }
         }
 
+        private void BtnPauseVerify_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isVerifyingPhones) return;
+
+            if (_isPaused)
+            {
+                // Đang tạm dừng → nút này lúc này là "Dừng hẳn"
+                _isPaused = false;
+                _pauseEvent.Set();  // Mở khóa để vòng lặp thoát được
+                _verifyPhonesCts?.Cancel();
+                TxtStatus.Text = "Đang dừng toàn bộ tiến trình kiểm tra số...";
+            }
+            else
+            {
+                // Đang chạy → Tạm dừng ngay
+                _isPaused = true;
+                _pauseEvent.Reset();
+                BtnStartVerify.Content = "▶ Tiếp tục kiểm tra";
+                BtnStartVerify.Style = (Style)FindResource("AddBtnStyle");
+                BtnPauseVerify.Content = "⏹ Dừng hẳn";
+                TxtStatus.Text = "Đã tạm dừng. Nhấn [▶ Tiếp tục] để chạy tiếp, hoặc [⏹ Dừng hẳn] để hủy.";
+            }
+        }
+
         private async void BtnStartVerify_Click(object sender, RoutedEventArgs e)
         {
             if (_isVerifyingPhones)
             {
-                _verifyPhonesCts?.Cancel();
-                TxtStatus.Text = "Đang dừng tiến trình kiểm tra số...";
+                if (_isPaused)
+                {
+                    // Đang tạm dừng → Tiếp tục
+                    _isPaused = false;
+                    _pauseEvent.Set();
+                    BtnStartVerify.Content = "⏹ Dừng kiểm tra";
+                    BtnStartVerify.Style = (Style)FindResource("DangerBtnStyle");
+                    BtnPauseVerify.Content = "⏸ Tạm dừng";
+                    TxtStatus.Text = "Tiếp tục kiểm tra số điện thoại...";
+                }
+                else
+                {
+                    // Đang chạy → Hỏi muốn dừng kiểu gì
+                    var result = System.Windows.MessageBox.Show(
+                        "Để dừng kiểm tra, chọn một trong hai tuỳ chọn sau:\n\n• YES  → Tạm dừng: dừng tại số hiện tại, có thể tiếp tục lại\n• NO   → Dừng hẳn: hủy toàn bộ tiến trình",
+                        "Dừng kiểm tra",
+                        MessageBoxButton.YesNoCancel,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Tạm dừng
+                        _isPaused = true;
+                        _pauseEvent.Reset();
+                        BtnStartVerify.Content = "▶ Tiếp tục kiểm tra";
+                        BtnStartVerify.Style = (Style)FindResource("AddBtnStyle");
+                        BtnPauseVerify.Content = "⏹ Dừng hẳn";
+                        TxtStatus.Text = "Đã tạm dừng. Nhấn [▶ Tiếp tục] để chạy tiếp, hoặc [⏹ Dừng hẳn] để hủy.";
+                    }
+                    else if (result == MessageBoxResult.No)
+                    {
+                        // Dừng hẳn
+                        _isPaused = false;
+                        _pauseEvent.Set(); // Mở khóa dừng trước để lượt hiện tại có thể thoát
+                        _verifyPhonesCts?.Cancel();
+                        TxtStatus.Text = "Đang dừng toàn bộ tiến trình kiểm tra số...";
+                    }
+                    // Cancel = không làm gì
+                }
                 return;
             }
 
@@ -1630,8 +1693,12 @@ namespace ViberManager
             _currentPageTab1 = 1;
 
             _isVerifyingPhones = true;
+            _isPaused = false;
+            _pauseEvent.Set(); // Đảm bảo được mở khóa khi bắt đầu
             BtnStartVerify.Content = "⏹ Dừng kiểm tra";
             BtnStartVerify.Style = (Style)FindResource("DangerBtnStyle");
+            BtnPauseVerify.Visibility = System.Windows.Visibility.Visible;
+            BtnPauseVerify.Content = "⏸ Tạm dừng";
             VerifyProgress.Value = 0;
             VerifyProgress.Maximum = phones.Count;
             _verifyPhonesCts = new System.Threading.CancellationTokenSource();
@@ -1648,6 +1715,14 @@ namespace ViberManager
                 foreach (string phone in phones)
                 {
                     if (_verifyPhonesCts.Token.IsCancellationRequested) break;
+
+                    // Nếu đang tạm dừng → ch᷑ cho đến khi được mở khóa (hoặc dừng hẳn)
+                    if (_isPaused)
+                    {
+                        TxtStatus.Text = $"⏸ Tạm dừng tại số: {phone} – Nhấn [▶ Tiếp tục] để chạy tiếp";
+                        await Task.Run(() => _pauseEvent.Wait(_verifyPhonesCts!.Token));
+                        if (_verifyPhonesCts.Token.IsCancellationRequested) break;
+                    }
 
                     TxtVerifyProgressStatus.Text = $"{completed}/{phones.Count}";
                     TxtStatus.Text = $"Đang kiểm tra số: {phone}...";
@@ -1715,10 +1790,13 @@ namespace ViberManager
                 }
                 await Task.Delay(500);
 
-                PopupViberLoading.IsOpen = false; // Ẩn lớp phủ loading khi kết thúc toàn bộ danh sách
+                PopupViberLoading.IsOpen = false;
                 _isVerifyingPhones = false;
+                _isPaused = false;
+                _pauseEvent.Set(); // reset về trạng thái mở cho lần sau
                 BtnStartVerify.Content = "▶ Bắt đầu kiểm tra";
                 BtnStartVerify.Style = (Style)FindResource("AddBtnStyle");
+                BtnPauseVerify.Visibility = System.Windows.Visibility.Collapsed;
                 int finalCompleted = (int)VerifyProgress.Value;
                 TxtVerifyProgressStatus.Text = $"Hoàn tất ({finalCompleted}/{phones.Count})";
                 TxtStatus.Text = $"Hoàn tất kiểm tra danh sách {finalCompleted}/{phones.Count} số điện thoại.";
