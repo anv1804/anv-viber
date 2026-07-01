@@ -111,8 +111,8 @@ namespace ViberManager
             // Khởi tạo Database SQLite cục bộ lưu lịch sử verify
             InitHistoryDatabase();
 
-            // Cấu hình chọn Viber profile làm mẫu test (Chỉ hiển thị các tài khoản ở trạng thái 'Đang nhúng')
-            var verifyView = CollectionViewSource.GetDefaultView(Profiles);
+            // Cấu hình chọn Viber profile làm mẫu test (Sử dụng ListCollectionView mới để độc lập bộ lọc với danh sách chính)
+            var verifyView = new System.Windows.Data.ListCollectionView(Profiles);
             verifyView.Filter = item =>
             {
                 var profile = item as ViberProfile;
@@ -245,7 +245,7 @@ namespace ViberManager
             _profilesView.Refresh();
 
             // Refresh danh sách tài khoản test để phản ánh trạng thái 'Đang nhúng'
-            var verifyView = CollectionViewSource.GetDefaultView(CmbVerifyProfile.ItemsSource);
+            var verifyView = CmbVerifyProfile.ItemsSource as System.Windows.Data.ListCollectionView;
             if (verifyView != null)
             {
                 verifyView.Refresh();
