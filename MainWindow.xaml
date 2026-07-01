@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ViberManager"
         mc:Ignorable="d"
-        Title="Anv Viber Premium" Height="800" Width="1480"
+        Title="Anv Viber Premium" Height="800" Width="1480" Icon="logo.png"
         WindowStartupLocation="CenterScreen"
         Background="#EFEFEF"
         FontFamily="Segoe UI" FontSize="12"
